@@ -27,7 +27,7 @@ export const mapRecord = <
 ) => {
   return Object.entries(record).reduce((acc: any, [key, value]) => {
     return { ...acc, [key]: mapper(value, key) }
-  }, {}) as Record<keyof Rec, ReturnType<Mapper>>
+  }, {}) as { [K in keyof Rec]: ReturnType<Mapper> }
 }
 
 const getHelpers = (store: Store, contextId: string) => {
@@ -268,7 +268,7 @@ const getHelpers = (store: Store, contextId: string) => {
     return ref.info.subscribersCount
   }
 
-  const setContextSubject = ($context: ProcessDispatcher) => {
+  const setContextDispatcher = ($context: ProcessDispatcher) => {
     getContextRef().info.$context = $context
   }
 
@@ -482,7 +482,7 @@ const getHelpers = (store: Store, contextId: string) => {
     updateSubscribersCount,
     getContextInfo,
     setContextName,
-    setContextSubject,
+    setContextDispatcher,
     setContextInfo,
     setContextRequests,
     /** Process **/

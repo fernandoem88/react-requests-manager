@@ -224,8 +224,8 @@ declare module 'types' {
     ) => void
   }
   export interface RequestUtils<Params = any> {
-    getProcessState: () => ProcessState
-    getRequestState: () => RequestState
+    getProcessState: () => ProcessState<Params>
+    getRequestState: () => RequestState<Params>
     // getContextState: () => ContextState<State>;
     clearError: (newError?: any) => void
     /**
@@ -330,6 +330,7 @@ declare module 'types' {
 
   export type GetSelectorParam<Selector> = Selector extends (
     param1: any,
+    reqs: any,
     ...params: infer Params
   ) => any
     ? Params[0] extends undefined
@@ -338,12 +339,11 @@ declare module 'types' {
     : []
 }
 
-declare module 'redux-store' {
-  export interface ReduxStore<S = any, A extends any = any> {
-    dispatch: (action: A) => void
+declare module 'state-manager-store' {
+  export interface StateManagerStore<S = any, A extends any = any> {
+    // dispatch: (action: A) => void
     getState: () => S
     subscribe: (listener: () => void) => { unsubscribe: any }
-    replaceReducer: (nextReducer: any) => void
   }
 }
 

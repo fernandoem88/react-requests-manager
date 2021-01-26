@@ -1,5 +1,4 @@
 import { Store, RequestUtilsStart } from 'types'
-import getHelpers from '../helpers'
 
 type GetRequestParams<Request> = Request extends (
   utils: any,
@@ -8,34 +7,35 @@ type GetRequestParams<Request> = Request extends (
   ? Params
   : []
 
-export default function Multi<
-  MultiRequest extends (
-    utils: RequestUtilsStart<any>,
-    ...params: [any]
+export default function Single<
+  Params = undefined,
+  SingleRequest extends (
+    utils: RequestUtilsStart<Params>,
+    params: Params
+  ) => Promise<void | false> = (
+    utils: RequestUtilsStart<Params>,
+    params: Params
   ) => Promise<void | false>
->(request: MultiRequest) {
+>(request: SingleRequest) {
+  //   type SingleRequest = typeof request
   type Request = (
-    utils: RequestUtilsStart<any>,
-    ...params: GetRequestParams<MultiRequest>
+    utils: RequestUtilsStart<Params>,
+    ...params: GetRequestParams<SingleRequest>
   ) => Promise<void | false>
-  return async function MultiProcessing(
+  return async function SingleProcessing(
     this: { contextId: string; requestName: string; store: Store },
-    utils: RequestUtilsStart<any>,
-    ...params: GetRequestParams<MultiRequest>
+    utils: RequestUtilsStart<Params>,
+    ...params: GetRequestParams<SingleRequest>
   ) {
     const contextId = this.contextId
-    const requestName = this.requestName
     const store = this.store
     if (!contextId) {
-      throw new Error('contextId is undefined in function: MultiProcessing')
+      throw new Error('contextId is undefined in function: SingleProcessing')
     }
     if (!store) {
-      throw new Error('store is undefined in function: MultiProcessing')
+      throw new Error('store is undefined in function: SingleProcessing')
     }
-    const helpers = getHelpers(store, contextId)
-    helpers.modifyRequestInfo(requestName, (draft) => {
-      draft.type = 'MultiProcesses'
-    })
+
     const prom = request(utils, params[0])
     // handle cancel
     prom
@@ -52,3 +52,7 @@ export default function Multi<
       })
   } as Request
 }
+
+const test = Single(async (utils, id: string) => {
+  //
+})

@@ -10,22 +10,21 @@ import {
   RequestState,
   ContextInfo
 } from 'types'
-import getContextCreator from './createContext'
 
-const getCreateRequests = (store: Store) => {
-  const createRequests = <
-    Requests extends Record<
-      any,
-      (utils: RequestUtilsStart<any>, params: any) => Promise<void | false>
-    >,
-    Actions extends Record<
-      any,
-      (utils: ActionUtils<Requests>, params: any) => void
-    >
-  >(
-    requestsConfigs: { requests: Requests },
-    actionsConfigs?: { actions: Actions }
-  ) => {
+const createRequests = <
+  Requests extends Record<
+    any,
+    (utils: RequestUtilsStart<any>, params: any) => Promise<void | false>
+  >,
+  Actions extends Record<
+    any,
+    (utils: ActionUtils<Requests>, params: any) => void
+  >
+>(
+  requestsConfigs: { requests: Requests },
+  actionsConfigs?: { actions: Actions }
+) => {
+  return (store: Store, name: string) => {
     type RequestKey = keyof Requests
     type RequestsParams<K extends RequestKey> = Requests[K] extends (
       utils: any,
@@ -47,10 +46,10 @@ const getCreateRequests = (store: Store) => {
 
     const stateReducer = getReducer(store, contextId)
 
-    const initializeRequests = (contextName: string) => {
+    const initializeRequests = () => {
       const initialContext: ContextInfo<any> = {
         requests: {},
-        name: contextName,
+        name,
         id: contextId,
         subscribersCount: 0
       }
@@ -77,7 +76,7 @@ const getCreateRequests = (store: Store) => {
     const getRequestUtils = (
       requestName: RequestKey,
       processId: string
-    ): RequestUtilsStart<any> => {
+    ): RequestUtilsStart<RequestsParams<typeof requestName>> => {
       const getRequestState = (): RequestState<
         RequestsParams<typeof requestName>
       > => {
@@ -264,7 +263,8 @@ const getCreateRequests = (store: Store) => {
         )
         const __requestCreator__ = requestCreator.bind({
           contextId,
-          requestName
+          requestName,
+          store
         }) as typeof requestCreator
         const promise = __requestCreator__(requestUtils, params)
         handleRequestErrors(process.id, promise, requestUtils.cancel)
@@ -401,17 +401,9 @@ const getCreateRequests = (store: Store) => {
           return createAction(actionCreator)
         }) as any)
 
-    const createContext = getContextCreator({
-      store,
-      requests,
-      actions,
-      contextId,
-      initializeRequests
-    })
-
-    return { createContext }
+    initializeRequests()
+    return { requests, actions, contextId }
   }
-  return createRequests
 }
 
-export default getCreateRequests
+export default createRequests

@@ -5,7 +5,7 @@ import createStore from './store'
 import { RequestState, Subject, GetSelectorParam } from 'types'
 
 import { useForceUpdate } from '../hooks.ts'
-import getHelpers, { copy } from './helpers'
+import getHelpers, { copy, mapRecord } from './helpers'
 
 const useShallowEqualRef = <Value = undefined>(value: Value) => {
   const ref = useRef(value)
@@ -15,54 +15,100 @@ const useShallowEqualRef = <Value = undefined>(value: Value) => {
   return ref
 }
 
-const createContext = <Configurator extends (store: any, name: string) => any>(
-  name: string,
-  configurator: Configurator
+const createContextsGroup = <
+  Configurators extends Record<any, (store: any, name: string) => any>
+>(
+  groupName: string,
+  configurators: Configurators
 ) => {
-  const store = createStore()
-  const { contextId, requests, actions } = configurator(store, name)
-
-  type Requests = ReturnType<Configurator> extends { requests: infer R }
+  type Contexts = Configurators
+  type ContextKey = keyof Contexts
+  type Requests<Ctx extends ContextKey> = ReturnType<Contexts[Ctx]> extends {
+    requests: infer R
+  }
     ? R
     : any
-  type Actions = ReturnType<Configurator> extends { actions: infer R } ? R : any
-  type RequestKey = keyof Requests
-  type RequestsParams<K extends RequestKey> = Requests[K] extends (
-    ...params: infer Params
-  ) => any
+
+  type Actions<Ctx extends ContextKey> = ReturnType<Contexts[Ctx]> extends {
+    actions: infer R
+  }
+    ? R
+    : any
+  type RequestKey<Ctx extends ContextKey> = keyof Requests<Ctx>
+  type RequestsParams<
+    Ctx extends ContextKey,
+    K extends RequestKey<Ctx>
+  > = Requests<Ctx>[K] extends (...params: infer Params) => any
     ? Params[0]
     : undefined
+  const store = createStore()
+  const dispatcher = new Subject()
 
-  const helpers = getHelpers(store, contextId)
-  helpers.setContextDispatcher(new Subject())
-  const getRequestsState = () =>
-    helpers.getRequests() as {
-      [K in RequestKey]: RequestState<RequestsParams<K>>
+  type ContextValue<Ctx extends keyof Contexts> = {
+    requests: Requests<Ctx>
+    actions: Actions<Ctx>
+    getRequestsState: () => {
+      [K in RequestKey<Ctx>]: RequestState<RequestsParams<Ctx, K>>
+    }
+    helpers: ReturnType<typeof getHelpers>
+  }
+  const createContext = <Ctx extends ContextKey>(
+    configurator: Configurators[Ctx],
+    contextName: Ctx
+  ) => {
+    const { contextId, requests, actions } = configurator(
+      store,
+      contextName as string
+    )
+    const helpers = getHelpers(store, contextId)
+    helpers.setContextDispatcher(dispatcher)
+    const getRequestsState = () =>
+      helpers.getRequests() as {
+        [K in RequestKey<Ctx>]: RequestState<RequestsParams<Ctx, K>>
+      }
+
+    return {
+      requests: requests as Requests<Ctx>,
+      actions: actions as Actions<Ctx>,
+      getRequestsState,
+      helpers
+    }
+  }
+
+  const contexts = mapRecord(configurators, (configurator, ctx) => {
+    return createContext<typeof ctx>(configurator, ctx)
+  }) as { [Ctx in ContextKey]: ContextValue<Ctx> }
+
+  const getAllStates = () =>
+    mapRecord(contexts, (ctx) => ctx.getRequestsState()) as {
+      [Ctx in ContextKey]: {
+        [K in RequestKey<Ctx>]: RequestState<RequestsParams<Ctx, K>>
+      }
     }
 
   const useRequests = <R extends any>(
     selector: (
-      reqs: { [K in RequestKey]: RequestState<RequestsParams<K>> }
+      reqs: {
+        [Ctx in keyof Contexts]: {
+          [K in RequestKey<Ctx>]: RequestState<RequestsParams<Ctx, K>>
+        }
+      }
     ) => R
   ) => {
-    const [state, setState] = useState(() =>
-      selector(helpers.getRequests() as any)
-    )
+    const [state, setState] = useState(() => selector(getAllStates()) as any)
     const getStateRef = useRef(() => state)
     getStateRef.current = () => state
     const selectorRef = useRef(selector)
     useEffect(() => {
-      helpers.updateSubscribersCount(1)
+      mapRecord(contexts, (ctx) => ctx.helpers.updateSubscribersCount(1))
       return () => {
-        helpers.updateSubscribersCount(-1)
+        mapRecord(contexts, (ctx) => ctx.helpers.updateSubscribersCount(-1))
       }
     }, [])
 
     useEffect(() => {
-      const dispatcher = helpers.getDispatcher()
-      const subscr = dispatcher.subscribe((action) => {
-        if (action.contextId !== contextId) return
-        const newValue = selectorRef.current(helpers.getRequests() as any)
+      const subscr = dispatcher.subscribe(() => {
+        const newValue = selectorRef.current(getAllStates() as any)
         const isEqual = shallowEqual(getStateRef.current(), newValue)
         if (isEqual) return
         setState(newValue)
@@ -82,13 +128,15 @@ const createContext = <Configurator extends (store: any, name: string) => any>(
   ) => {
     const getCombinedState = () => ({
       state: stateManagerStore.getState(),
-      requests: getRequestsState()
+      requests: getAllStates()
     })
     const useSelector = <
       Selector extends (
         state: SMState,
         requests: {
-          [K in RequestKey]: RequestState<RequestsParams<K>>
+          [Ctx in ContextKey]: {
+            [K in RequestKey<Ctx>]: RequestState<RequestsParams<Ctx, K>>
+          }
         },
         ...params: [any]
       ) => any
@@ -136,7 +184,6 @@ const createContext = <Configurator extends (store: any, name: string) => any>(
       //   shouldCheckUpdateInUseEffectRef.current = true
       // })
       useEffect(() => {
-        const $context = helpers.getDispatcher()
         const doUpdate = (shouldUpdate: boolean) => {
           if (shouldUpdate) {
             shouldCheckUpdateInMainBodyRef.current = false
@@ -146,8 +193,7 @@ const createContext = <Configurator extends (store: any, name: string) => any>(
         const subs1 = stateManagerStore.subscribe(() => {
           doUpdate(checkUpdate())
         })
-        const subs2 = $context.subscribe((action) => {
-          if (action.contextId !== contextId) return
+        const subs2 = dispatcher.subscribe(() => {
           doUpdate(checkUpdate())
         })
         return () => {
@@ -170,16 +216,23 @@ const createContext = <Configurator extends (store: any, name: string) => any>(
   }
 
   return {
-    requestsManager: {
-      requests: requests as Requests,
-      actions: actions as Actions
+    requestsManager: mapRecord(
+      contexts,
+      ({ requests, actions, getRequestsState }) => ({
+        requests,
+        actions,
+        getRequests: getRequestsState
+      })
+    ) as {
+      [Ctx in ContextKey]: {
+        requests: Requests<Ctx>
+        actions: Actions<Ctx>
+      }
     },
-    // hooks
     useRequests,
-    // helpers
-    getState: getRequestsState,
+    getState: getAllStates,
     bindToStateManager
   }
 }
 
-export default createContext
+export default createContextsGroup
