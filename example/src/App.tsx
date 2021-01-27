@@ -1,10 +1,9 @@
 import React from 'react'
 
-import { ExampleComponent } from 'react-requests-manager'
-import 'react-requests-manager/dist/index.css'
+import {} from 'react-requests-manager'
 
-const App = () => {
-  return <ExampleComponent text="Create React Library Example 😄" />
-}
+const App = React.memo((props) => {
+  return <div>Pippo</div>
+})
 
 export default App

@@ -4,7 +4,6 @@ import {
   Store,
   RequestInfo,
   RequestState,
-  ExcludedFromProcess,
   ProcessInfo,
   ProcessState,
   ProcessStatus,
@@ -15,6 +14,12 @@ import {
   ActionPayload
 } from 'types'
 import { defaultProcessDispatcher } from './store'
+
+enum ExcludedFromProcess {
+  abortInfo,
+  resolver,
+  contextId
+}
 
 export const copy = <V>(value: V) => produce(value, () => {}) as V
 

@@ -1,10 +1,14 @@
 {
   "name": "react-requests-manager",
   "version": "1.0.0",
-  "description": "have a full control on your  async actions",
-  "author": "fernando ekutsu mondele",
+  "description": "have a full control on your async actions with abort, queue and multi-processing features",
+  "author": {
+    "name": "Fernando Ekutsu Mondele",
+    "email": "vs_fernando@yahoo.fr",
+    "url": "https://www.linkedin.com/in/fernando-ekutsu-mondele-67405484/"
+  },
+  "repository": "/fernandoem88/react-requests-manager",
   "license": "MIT",
-  "repository": "fernando ekutsu mondele/react-requests-manager",
   "main": "dist/index.js",
   "module": "dist/index.modern.js",
   "source": "src/index.ts",

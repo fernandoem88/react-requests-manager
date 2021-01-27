@@ -53,7 +53,3 @@ export default function Single<
       })
   } as Request
 }
-
-const test = Single(async (utils, id: string) => {
-  //
-})

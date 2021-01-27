@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from 'react'
 import { shallowEqual } from 'shallow-utils'
 import { StateManagerStore } from 'state-manager-store'
 import createStore from './store'
-import { RequestState, Subject, GetSelectorParam } from 'types'
+import { Subject } from './subject'
+import { RequestState, GetSelectorParam } from 'types'
 
 import { useForceUpdate } from '../hooks.ts'
 import getHelpers, { copy } from './helpers'
@@ -128,8 +129,9 @@ const createContext = <Configurator extends (store: any, name: string) => any>(
       ) => any
     >(
       selector: Selector,
-      ...[params]: GetSelectorParam<Selector>
+      ...args: GetSelectorParam<Selector>
     ) => {
+      const [params] = args
       // am using useState to not define the initial state again
       const [initialCombined] = useState(getCombinedState)
       const selectedValueRef = useRef({
@@ -204,7 +206,7 @@ const createContext = <Configurator extends (store: any, name: string) => any>(
   }
 
   return {
-    requestsManager: {
+    manager: {
       requests: requests as Requests,
       actions: actions as Actions
     },

@@ -1,9 +1,21 @@
-import './index.css'
-import { createStore } from 'redux'
 import React from 'react'
 import ReactDOM from 'react-dom'
+import { Provider } from './components/Provider'
+import { reducer } from './reducers'
 import App from './App'
 
-const store = createStore(() => null)
+const initialState = { title: 'title', todoList: [] }
+const Root = React.memo((props) => {
+  return (
+    <Provider reducer={reducer} initialState={initialState}>
+      {props.children}
+    </Provider>
+  )
+})
 
-ReactDOM.render(<App />, document.getElementById('root'))
+ReactDOM.render(
+  <Root>
+    <App />
+  </Root>,
+  document.getElementById('root')
+)

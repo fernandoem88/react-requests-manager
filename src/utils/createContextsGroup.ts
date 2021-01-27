@@ -173,8 +173,9 @@ const createContextsGroup = <
       ) => any
     >(
       selector: Selector,
-      ...[params]: GetSelectorParam<Selector>
+      ...args: GetSelectorParam<Selector>
     ) => {
+      const [params] = args
       // am using useState to not define the initial state again
       const [initialCombined] = useState(getCombinedState)
       const selectedValueRef = useRef({
@@ -247,14 +248,11 @@ const createContextsGroup = <
   }
 
   return {
-    requestsManager: mapRecord(
-      contexts,
-      ({ requests, actions, getRequestsState }) => ({
-        requests,
-        actions,
-        getRequests: getRequestsState
-      })
-    ) as {
+    manager: mapRecord(contexts, ({ requests, actions, getRequestsState }) => ({
+      requests,
+      actions,
+      getRequests: getRequestsState
+    })) as {
       [Ctx in ContextKey]: {
         requests: Requests<Ctx>
         actions: Actions<Ctx>

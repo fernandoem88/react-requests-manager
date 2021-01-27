@@ -1,9 +1,9 @@
 declare module 'types' {
-  import { Subject as SJ, Subscription } from 'rx-subject'
+  // import { Subscription } from 'rx-subject'
   export class Subject<T = any> {
     constructor()
     next(value: T): void
-    subscribe(subscriber: (value: T) => void): Subscription
+    subscribe(subscriber: (value: T) => void): { unsubscribe: () => void }
   }
   // ******* ******* ******* \\
   // ******* ******* ******* \\
@@ -68,12 +68,6 @@ declare module 'types' {
     | 'keepInStateOnAbort'
     | 'keepInStateOnCancel'
   >
-
-  export enum ExcludedFromProcess {
-    abortInfo,
-    resolver,
-    contextId
-  }
 
   export type ProcessStatus =
     | 'created' // initial state
