@@ -253,7 +253,7 @@ declare module 'types' {
       onFinish?: () => void
     ) => void
     abortPrevious: (
-      selector?: (process: ProcessState, index: number) => boolean
+      selector?: (process: ProcessState<Params>, index: number) => boolean
     ) => void
     onAbort: (
       callback: () => void,
@@ -340,9 +340,9 @@ declare module 'types' {
 }
 
 declare module 'state-manager-store' {
-  export interface StateManagerStore<S = any, A extends any = any> {
+  export interface StateManagerStore<State = any> {
     // dispatch: (action: A) => void
-    getState: () => S
+    getState: () => State
     subscribe: (listener: () => void) => { unsubscribe: any }
   }
 }

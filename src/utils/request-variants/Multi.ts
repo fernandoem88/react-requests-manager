@@ -9,19 +9,24 @@ type GetRequestParams<Request> = Request extends (
   : []
 
 export default function Multi<
+  Params = undefined,
   MultiRequest extends (
-    utils: RequestUtilsStart<any>,
-    ...params: [any]
+    utils: RequestUtilsStart<Params>,
+    params: Params
+  ) => Promise<void | false> = (
+    utils: RequestUtilsStart<Params>,
+    params: Params
   ) => Promise<void | false>
 >(request: MultiRequest) {
+  type Args = GetRequestParams<MultiRequest>
   type Request = (
-    utils: RequestUtilsStart<any>,
-    ...params: GetRequestParams<MultiRequest>
+    utils: RequestUtilsStart<Args[0]>,
+    ...params: Args
   ) => Promise<void | false>
   return async function MultiProcessing(
     this: { contextId: string; requestName: string; store: Store },
-    utils: RequestUtilsStart<any>,
-    ...params: GetRequestParams<MultiRequest>
+    utils: RequestUtilsStart<Params>,
+    ...params: Args
   ) {
     const contextId = this.contextId
     const requestName = this.requestName

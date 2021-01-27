@@ -11,37 +11,68 @@ export { default as createRequests } from './utils/createRequests'
 export { default as createContext } from './utils/createContext'
 export { default as createContextsGroup } from './utils/createContextsGroup'
 
-const userConfig = createRequests(
-  {
-    requests: {
-      getUser: Single(async (utils) => {
-        utils.start()
-        const state = utils.getRequestState()
-      }),
-      deleteUser: Queue<string>(async (utils, num) => {
-        utils.abortPrevious()
-        const state = utils.getRequestState()
+const getUser = Single(async (utils, id: number) => {
+  const initialState = utils.getRequestState()
+  if (initialState.isProcessing) {
+    // utils.abortPrevious()
+    utils.abortPrevious((pcss) => pcss.params > 3)
+  }
+  utils.onAbort(() => {
+    // some where in the code, some one called abort(with this process id)
+    // so let the manager know how to abort this process
+    // here you can dispatch some redux actions
+  })
+  // now we can start the process
+  utils.start() // this will dispatch a start action to the useRequests hook
+  try {
+    //
+    utils.finish('success', () => {
+      // dispatch redux
+    })
+  } catch (error) {
+    utils.finish('error', () => {
+      // dispatch redux
+    })
+  }
+})
 
-        await utils.inQueue()
-        utils.onAbort(() => {
-          // abort logic goes here
-        })
-        try {
-          utils.finish('success', function onFinish() {
-            // dispatch to redux
-          })
-        } catch (error) {
-          utils.finish('error', function onFinish() {
-            // dispatch to redux
-          })
-        }
-      })
-    }
+const deleteUser = Queue(async (utils, num: number) => {
+  utils.abortPrevious()
+  const state = utils.getRequestState()
+
+  await utils.inQueue()
+  utils.onAbort(() => {
+    // abort logic goes here
+  })
+  try {
+    utils.finish('success', function onFinish() {
+      // dispatch to redux
+    })
+  } catch (error) {
+    utils.finish('error', function onFinish() {
+      // dispatch to redux
+    })
+  }
+})
+const requests = {
+  getUser,
+  deleteUser
+}
+const user = createRequests(
+  {
+    requests
   },
-  { actions: { stopTest(utils) {} } }
+  {
+    actions: {
+      stopTest(utils) {
+        utils.getRequestState('deleteUser')
+        const state = utils.getRequestsState()
+      }
+    }
+  }
 )
 
-const postConfig = createRequests(
+const posts = createRequests(
   {
     requests: {
       getPosts: async (utils) => {
@@ -52,13 +83,13 @@ const postConfig = createRequests(
   { actions: { setPippo() {} } }
 )
 
-const appRM = createContextsGroup('app', {
-  user: userConfig,
-  posts: postConfig
+const appRM = createContextsGroup({
+  user,
+  posts
 })
-const { requestsManager, useRequests, bindToStateManager } = appRM
-requestsManager.user.actions.stopTest()
-useRequests((state) => state.user)
+const { requestsManager: $, useRequests, bindToStateManager } = appRM
+$.user.actions.stopTest()
+const deleteUserState = useRequests((reqs) => reqs.user.deleteUser)
 
 const { createSelectorHook } = bindToStateManager({
   subscribe: null as any,
@@ -67,6 +98,6 @@ const { createSelectorHook } = bindToStateManager({
   }
 })
 
-const useAppSelector = createSelectorHook()
-const ccc = useAppSelector((state, reqs) => state.title)
+const useSelector = createSelectorHook()
+const ccc = useSelector((state, reqs) => state.title)
 // const { useRequests } = createContext('pippo', conf)

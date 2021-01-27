@@ -18,7 +18,6 @@ const useShallowEqualRef = <Value = undefined>(value: Value) => {
 const createContextsGroup = <
   Configurators extends Record<any, (store: any, name: string) => any>
 >(
-  groupName: string,
   configurators: Configurators
 ) => {
   type Contexts = Configurators
@@ -79,57 +78,89 @@ const createContextsGroup = <
     return createContext<typeof ctx>(configurator, ctx)
   }) as { [Ctx in ContextKey]: ContextValue<Ctx> }
 
-  const getAllStates = () =>
-    mapRecord(contexts, (ctx) => ctx.getRequestsState()) as {
-      [Ctx in ContextKey]: {
-        [K in RequestKey<Ctx>]: RequestState<RequestsParams<Ctx, K>>
-      }
+  type RequestsState = {
+    [Ctx in keyof Contexts]: {
+      [K in RequestKey<Ctx>]: RequestState<RequestsParams<Ctx, K>>
     }
-
-  const useRequests = <R extends any>(
-    selector: (
-      reqs: {
-        [Ctx in keyof Contexts]: {
-          [K in RequestKey<Ctx>]: RequestState<RequestsParams<Ctx, K>>
-        }
-      }
-    ) => R
+  }
+  const getAllRequestsStates = () =>
+    mapRecord(contexts, (ctx) => ctx.getRequestsState()) as RequestsState
+  const useRequests = <
+    Selector extends (reqs: RequestsState, ...params: [any]) => any
+  >(
+    selector: Selector,
+    ...args: Selector extends (reqs: any, ...params: infer Params) => any
+      ? Params[0] extends undefined
+        ? []
+        : Params
+      : []
   ) => {
-    const [state, setState] = useState(() => selector(getAllStates()) as any)
-    const getStateRef = useRef(() => state)
-    getStateRef.current = () => state
-    const selectorRef = useRef(selector)
+    const [params] = args
+    // am using useState to not define the initial state again
+    const [initialReqs] = useState<RequestsState>(getAllRequestsStates)
+    const selectedValueRef = useRef({
+      value: copy(selector(initialReqs, params[0])) as ReturnType<Selector>
+    })
+    // checkUpdate returns true if the selected value is updated
+    const { current: checkUpdate } = useRef(() => {
+      const reqs = getAllRequestsStates() as RequestsState
+      const newSelectedValue = selector(reqs, parameter)
+      const isEqual = shallowEqual(
+        newSelectedValue,
+        selectedValueRef.current.value
+      )
+      if (isEqual) return false
+      selectedValueRef.current = { value: copy(newSelectedValue) }
+      return true
+    })
+    // if shouldCheckUpdateInMainBodyRef.current is true, we will check for update in the body of this hook not in the useEffect
+    const shouldCheckUpdateInMainBodyRef = useRef(true)
+    // const shouldCheckUpdateInUseEffectRef = useRef(false)
+    const paramsRef = useShallowEqualRef(params)
+    const parameter = paramsRef.current
+    if (shouldCheckUpdateInMainBodyRef.current) {
+      // shouldCheckUpdateInUseEffectRef.current = false
+      checkUpdate()
+    } else {
+      // it's false only when there was an update in useEffect so to avoid checking it twice
+      shouldCheckUpdateInMainBodyRef.current = true
+    }
+    const forceUpdate = useForceUpdate()
+    // useEffect(() => {
+    //   shouldCheckUpdateInUseEffectRef.current = true
+    // })
     useEffect(() => {
       mapRecord(contexts, (ctx) => ctx.helpers.updateSubscribersCount(1))
       return () => {
         mapRecord(contexts, (ctx) => ctx.helpers.updateSubscribersCount(-1))
       }
     }, [])
-
     useEffect(() => {
-      const subscr = dispatcher.subscribe(() => {
-        const newValue = selectorRef.current(getAllStates() as any)
-        const isEqual = shallowEqual(getStateRef.current(), newValue)
-        if (isEqual) return
-        setState(newValue)
+      // const dispatcher = helpers.getDispatcher()
+      const doUpdate = (shouldUpdate: boolean) => {
+        if (shouldUpdate) {
+          shouldCheckUpdateInMainBodyRef.current = false
+          forceUpdate()
+        }
+      }
+      const subscription = dispatcher.subscribe(() => {
+        doUpdate(checkUpdate())
       })
       return () => {
-        subscr.unsubscribe()
+        subscription.unsubscribe()
       }
-    }, [])
-    return state
+    }, [parameter])
+    return selectedValueRef.current.value
   }
 
-  const bindToStateManager = <
-    SMState = any,
-    SMStore extends StateManagerStore<SMState> = StateManagerStore<SMState>
-  >(
+  const bindToStateManager = <SMStore extends StateManagerStore<any>>(
     stateManagerStore: SMStore
   ) => {
     const getCombinedState = () => ({
       state: stateManagerStore.getState(),
-      requests: getAllStates()
+      requests: getAllRequestsStates()
     })
+    type SMState = ReturnType<SMStore['getState']>
     const useSelector = <
       Selector extends (
         state: SMState,
@@ -230,7 +261,7 @@ const createContextsGroup = <
       }
     },
     useRequests,
-    getState: getAllStates,
+    getState: getAllRequestsStates,
     bindToStateManager
   }
 }

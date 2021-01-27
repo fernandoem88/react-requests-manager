@@ -78,9 +78,10 @@ export default function Queue<
     return { ...commonUtils, inQueue }
   }
 
+  type Args = GetRequestParams<QueueRequest>
   type Request = (
-    utils: RequestUtilsStart<any>,
-    ...params: GetRequestParams<QueueRequest>
+    utils: RequestUtilsStart<Args[0]>,
+    ...params: Args
   ) => Promise<void | false>
   return async function Queue(
     this: { contextId: string; requestName: string; store: Store },

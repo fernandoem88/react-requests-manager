@@ -18,9 +18,10 @@ export default function Single<
   ) => Promise<void | false>
 >(request: SingleRequest) {
   //   type SingleRequest = typeof request
+  type Args = GetRequestParams<SingleRequest>
   type Request = (
-    utils: RequestUtilsStart<Params>,
-    ...params: GetRequestParams<SingleRequest>
+    utils: RequestUtilsStart<Args[0]>,
+    ...params: Args
   ) => Promise<void | false>
   return async function SingleProcessing(
     this: { contextId: string; requestName: string; store: Store },
