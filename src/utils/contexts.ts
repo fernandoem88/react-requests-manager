@@ -1,21 +1,15 @@
 import { useState, useRef, useEffect } from 'react'
 import { shallowEqual } from 'shallow-utils'
 import { StateManagerStore } from 'state-manager-store'
-import createStore from './store'
-import { RequestState, Subject, GetSelectorParam } from 'types'
+import { RequestState, GetSelectorParam } from 'types'
 
-import { useForceUpdate } from '../hooks.ts'
+import createStore from './store'
+import { Subject } from './subject'
+
+import { useForceUpdate, useShallowEqualRef } from '../hooks.ts'
 import getHelpers, { copy, mapRecord } from './helpers'
 
-const useShallowEqualRef = <Value = undefined>(value: Value) => {
-  const ref = useRef(value)
-  if (!shallowEqual(value, ref.current)) {
-    ref.current = value
-  }
-  return ref
-}
-
-const createContextsGroup = <
+const createContextsGroup = () => <
   Configurators extends Record<any, (store: any, name: string) => any>
 >(
   configurators: Configurators

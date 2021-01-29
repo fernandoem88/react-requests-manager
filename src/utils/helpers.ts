@@ -145,9 +145,10 @@ const getHelpers = (store: Store, contextId: string) => {
     return store.contexts[contextId]
   }
 
+  type TEST = string
   const getContextName = () => {
     // giving the object with reference
-    return getContextRef().info.name
+    return getContextRef().info.name as TEST
   }
 
   const getSubscribersCount = () => {
@@ -275,10 +276,6 @@ const getHelpers = (store: Store, contextId: string) => {
 
   const setContextDispatcher = ($context: ProcessDispatcher) => {
     getContextRef().info.$context = $context
-  }
-
-  const setDispatcher = (dipatcher: ProcessDispatcher) => {
-    getContextRef().info.$context = dipatcher
   }
 
   const getDispatcher = (): ProcessDispatcher => {
@@ -503,7 +500,6 @@ const getHelpers = (store: Store, contextId: string) => {
     getContextName,
     getSubscribersCount,
     getDispatcher,
-    setDispatcher,
     addAbortInfo
   }
 }

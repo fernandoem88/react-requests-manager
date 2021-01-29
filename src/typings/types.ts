@@ -1,5 +1,20 @@
 declare module 'types' {
   // import { Subscription } from 'rx-subject'
+  export type GetRequestParams<Request> = Request extends (
+    utils: any,
+    ...args: infer Params
+  ) => any
+    ? Params
+    : []
+
+  // export type RequestWithoutParams = (
+  //   utils: RequestUtilsStart<undefined>
+  // ) => Promise<void | false>
+
+  export type Request<Params extends [any]> = (
+    utils: RequestUtilsStart<Params[0]>,
+    ...params: Params
+  ) => Promise<void | false>
   export class Subject<T = any> {
     constructor()
     next(value: T): void
@@ -207,8 +222,10 @@ declare module 'types' {
 
   export interface ActionUtils<Requests extends Record<any, any>> {
     // getContextState: () => ContextState<State>;
-    getRequestState: (key: keyof Requests) => RequestState
-    getRequestsState: () => Record<keyof Requests, RequestState>
+    getRequestState: <Params = any>(key: keyof Requests) => RequestState<Params>
+    getRequestsState: () => {
+      [K in keyof Requests]: RequestState<GetRequestParams<Requests[K]>>
+    }
     clearErrors: (
       selector?: keyof Requests | ((requestState: RequestState) => boolean)
     ) => void
@@ -258,7 +275,7 @@ declare module 'types' {
 
   export interface RequestUtilsStart<Params = any>
     extends RequestUtils<Params> {
-    start: (onStart?: () => void) => string
+    start: (onStart?: () => void) => void
   }
 
   export interface RequestUtilsQueue<Params = any>
@@ -333,6 +350,8 @@ declare module 'types' {
     : []
 }
 
+declare module 'uniqid'
+
 declare module 'state-manager-store' {
   export interface StateManagerStore<State = any> {
     // dispatch: (action: A) => void
@@ -346,5 +365,3 @@ declare module 'shallow-utils' {
   export function shallowEqualExcept(): any
   export function shallowItemsDifferExcept(): any
 }
-
-declare module 'uniqid'

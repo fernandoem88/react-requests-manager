@@ -2,10 +2,10 @@ import React from 'react'
 import { createContext } from 'react-hooks-in-callback'
 import { useReducer } from 'react'
 import { ActionType } from '../reducers'
-
+export type Item = { id: string; rate: number }
 export type State = {
   title: string
-  todoList: { id: string }[]
+  todoList: Item[]
 }
 const stateCtx = createContext<State>(undefined as any)
 const dispatchCtx = createContext<

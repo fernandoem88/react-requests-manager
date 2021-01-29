@@ -12,7 +12,7 @@ export const reducer = (
 ) => {
   switch (action.type) {
     case ActionType.ADD_TODO:
-      return { ...state, todoList: [...state.todoList, { id: action.payload }] }
+      return { ...state, todoList: [...state.todoList, action.payload] }
     case ActionType.DELETE_TODO:
       return {
         ...state,

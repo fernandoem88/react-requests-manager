@@ -1,6 +1,4 @@
 import uniqid from 'uniqid'
-import getHelpers, { mapRecord } from '../utils/helpers'
-import getReducer from '../utils/reducer'
 import {
   Store,
   ProcessInfo,
@@ -10,8 +8,10 @@ import {
   RequestState,
   ContextInfo
 } from 'types'
+import getHelpers, { mapRecord } from './helpers'
+import getReducer from './reducer'
 
-const createRequests = <
+const createRequests = () => <
   Requests extends Record<
     any,
     (utils: RequestUtilsStart<any>, params: any) => Promise<void | false>
@@ -136,7 +136,7 @@ const createRequests = <
           }
           helpers.dispatchToHooks({ type: 'ON_START', payload })
         }
-        return processId
+        // return processId
       }
       /**
        *
@@ -321,7 +321,7 @@ const createRequests = <
         return mapRecord(
           helpers.getContextInfo().requests,
           helpers.converters.requestToState
-        )
+        ) as any
       }
       const clearErrors: AU['clearErrors'] = (selector) => {
         const { requests } = helpers.getContextInfo()
@@ -380,7 +380,7 @@ const createRequests = <
           }
         }
       }
-      const actionUtils: ActionUtils<any> = {
+      const actionUtils: ActionUtils<Requests> = {
         getRequestState,
         getRequestsState,
         clearErrors,
