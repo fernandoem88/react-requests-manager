@@ -1,14 +1,15 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import ReactSlider from 'react-slider'
 
 import { Root } from './styled'
+import { $$, useRequests } from '../../reducers/requests'
 
 interface Props {
   duration: number
 }
 const RequestItem: React.FC<Props> = (props) => {
   const { duration } = props
-  // const max = duration * 100
+  const processIdRef = useRef<string>()
   const [value, setValue] = useState(0)
   const [timer, setTimer] = useState(0)
   const [timerStatus, setTimerStatus] = useState<
@@ -41,7 +42,6 @@ const RequestItem: React.FC<Props> = (props) => {
         if (newV > 100) {
           return v
         }
-
         return newV
       })
       if (d >= 100) {
@@ -51,8 +51,21 @@ const RequestItem: React.FC<Props> = (props) => {
     }, 10 * duration)
     return () => clearInterval(ti)
   }, [duration, timerStatus])
+
+  const processId = processIdRef.current
+  const isProcessing = useRequests(
+    (reqs, id) => !!id && reqs.singleRequest.isProcessing,
+    'pippo'
+  )
+  const process = useRequests((reqs, pcssId) => {
+    const { details } = reqs.singleRequest
+    console.log('useRequests', processId, pcssId)
+    return details.processes.find((pcss) => pcss.id === pcssId)
+  }, processId || '')
+
   return (
     <Root status={timerStatus}>
+      <div>{isProcessing ? 'processing' : ''}</div>
       <div>
         <ReactSlider
           className='request-slider'
@@ -78,22 +91,35 @@ const RequestItem: React.FC<Props> = (props) => {
         {duration - timer}
       </div>
       <div>
-        <div
-          onClick={() => {
-            setTimer(0)
-            setValue(0)
-            setTimerStatus('started')
-          }}
-        >
-          start
-        </div>
-        <div
-          onClick={() => {
-            setTimerStatus('stopped')
-          }}
-        >
-          abort
-        </div>
+        {timerStatus !== 'started' && (
+          <div
+            onClick={() => {
+              const pcssId = $$.requests.singleRequest(duration)
+              processIdRef.current = pcssId
+              setTimer(0)
+              setValue(0)
+              setTimerStatus('started')
+            }}
+          >
+            start
+          </div>
+        )}
+        {timerStatus === 'started' && (
+          <div
+            onClick={() => {
+              debugger
+              if (process) {
+                $$.actions.abort({
+                  requestName: 'singleRequest',
+                  id: process.id
+                })
+              }
+              setTimerStatus('stopped')
+            }}
+          >
+            abort
+          </div>
+        )}
       </div>
     </Root>
   )
