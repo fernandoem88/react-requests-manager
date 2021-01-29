@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { RequestState, GetSelectorParam } from 'types'
 import { shallowEqual } from 'shallow-utils'
 import { StateManagerStore } from 'state-manager-store'
@@ -48,30 +48,41 @@ const createContext = () => <
   ) => {
     const [params] = args
     // am using useState to not define the initial state again
+    if (params) {
+      // console.log(params)
+    }
     const [initialReqs] = useState<RequestsState>(helpers.getRequests as any)
+
+    const [initialSelectedValue] = useState<ReturnType<Selector>>(() => {
+      return copy(selector(initialReqs, params)) as ReturnType<Selector>
+    })
     const selectedValueRef = useRef({
-      value: copy(selector(initialReqs, params[0])) as ReturnType<Selector>
+      value: initialSelectedValue
     })
     // checkUpdate returns true if the selected value is updated
-    const { current: checkUpdate } = useRef(() => {
+
+    const checkUpdate = useCallback((parameter: any) => {
       const reqs = helpers.getRequests() as RequestsState
       const newSelectedValue = selector(reqs, parameter)
       const isEqual = shallowEqual(
         newSelectedValue,
         selectedValueRef.current.value
       )
+      if (params && isEqual) {
+        // debugger
+      }
       if (isEqual) return false
       selectedValueRef.current = { value: copy(newSelectedValue) }
       return true
-    })
+    }, [])
     // if shouldCheckUpdateInMainBodyRef.current is true, we will check for update in the body of this hook not in the useEffect
     const shouldCheckUpdateInMainBodyRef = useRef(true)
     // const shouldCheckUpdateInUseEffectRef = useRef(false)
     const paramsRef = useShallowEqualRef(params)
-    const parameter = paramsRef.current
+
     if (shouldCheckUpdateInMainBodyRef.current) {
       // shouldCheckUpdateInUseEffectRef.current = false
-      checkUpdate()
+      checkUpdate(paramsRef.current)
     } else {
       // it's false only when there was an update in useEffect so to avoid checking it twice
       shouldCheckUpdateInMainBodyRef.current = true
@@ -96,13 +107,13 @@ const createContext = () => <
       }
       const subscription = dispatcher.subscribe((action) => {
         if (action.contextId !== contextId) return
-        doUpdate(checkUpdate())
+        doUpdate(checkUpdate(paramsRef.current))
       })
       return () => {
         subscription.unsubscribe()
       }
-    }, [parameter])
-    return selectedValueRef.current.value
+    }, [])
+    return selectedValueRef.current.value as ReturnType<Selector>
   }
 
   const bindToStateManager = <SMStore extends StateManagerStore<any>>(

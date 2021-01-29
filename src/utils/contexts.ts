@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { shallowEqual } from 'shallow-utils'
 import { StateManagerStore } from 'state-manager-store'
 import { RequestState, GetSelectorParam } from 'types'
@@ -92,11 +92,14 @@ const createContextsGroup = () => <
     const [params] = args
     // am using useState to not define the initial state again
     const [initialReqs] = useState<RequestsState>(getAllRequestsStates)
+    const [initialSelected] = useState(
+      () => copy(selector(initialReqs, params)) as ReturnType<Selector>
+    )
     const selectedValueRef = useRef({
-      value: copy(selector(initialReqs, params[0])) as ReturnType<Selector>
+      value: initialSelected
     })
     // checkUpdate returns true if the selected value is updated
-    const { current: checkUpdate } = useRef(() => {
+    const checkUpdate = useCallback((parameter: any) => {
       const reqs = getAllRequestsStates() as RequestsState
       const newSelectedValue = selector(reqs, parameter)
       const isEqual = shallowEqual(
@@ -106,15 +109,15 @@ const createContextsGroup = () => <
       if (isEqual) return false
       selectedValueRef.current = { value: copy(newSelectedValue) }
       return true
-    })
+    }, [])
     // if shouldCheckUpdateInMainBodyRef.current is true, we will check for update in the body of this hook not in the useEffect
     const shouldCheckUpdateInMainBodyRef = useRef(true)
     // const shouldCheckUpdateInUseEffectRef = useRef(false)
     const paramsRef = useShallowEqualRef(params)
-    const parameter = paramsRef.current
+
     if (shouldCheckUpdateInMainBodyRef.current) {
       // shouldCheckUpdateInUseEffectRef.current = false
-      checkUpdate()
+      checkUpdate(paramsRef.current)
     } else {
       // it's false only when there was an update in useEffect so to avoid checking it twice
       shouldCheckUpdateInMainBodyRef.current = true
@@ -138,12 +141,12 @@ const createContextsGroup = () => <
         }
       }
       const subscription = dispatcher.subscribe(() => {
-        doUpdate(checkUpdate())
+        doUpdate(checkUpdate(paramsRef.current))
       })
       return () => {
         subscription.unsubscribe()
       }
-    }, [parameter])
+    }, [])
     return selectedValueRef.current.value
   }
 
