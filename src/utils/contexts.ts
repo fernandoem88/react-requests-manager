@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { shallowEqual } from 'shallow-utils'
 import { StateManagerStore } from 'state-manager-store'
-import { RequestState, GetSelectorParam } from 'types'
+import { RequestState, Get3rdParams, Get2ndParams } from 'types'
 
 import createStore from './store'
 import { Subject } from './subject'
@@ -80,14 +80,10 @@ const createContextsGroup = () => <
   const getAllRequestsStates = () =>
     mapRecord(contexts, (ctx) => ctx.getRequestsState()) as RequestsState
   const useRequests = <
-    Selector extends (reqs: RequestsState, ...params: [any]) => any
+    Selector extends (reqs: RequestsState, params: any) => any
   >(
     selector: Selector,
-    ...args: Selector extends (reqs: any, ...params: infer Params) => any
-      ? Params[0] extends undefined
-        ? []
-        : Params
-      : []
+    ...args: Get2ndParams<Selector>
   ) => {
     const [params] = args
     // am using useState to not define the initial state again
@@ -95,13 +91,15 @@ const createContextsGroup = () => <
     const [initialSelected] = useState(
       () => copy(selector(initialReqs, params)) as ReturnType<Selector>
     )
+    const selectorRef = useRef(selector)
+    selectorRef.current = selector
     const selectedValueRef = useRef({
       value: initialSelected
     })
     // checkUpdate returns true if the selected value is updated
     const checkUpdate = useCallback((parameter: any) => {
       const reqs = getAllRequestsStates() as RequestsState
-      const newSelectedValue = selector(reqs, parameter)
+      const newSelectedValue = selectorRef.current(reqs, parameter)
       const isEqual = shallowEqual(
         newSelectedValue,
         selectedValueRef.current.value
@@ -146,7 +144,7 @@ const createContextsGroup = () => <
       return () => {
         subscription.unsubscribe()
       }
-    }, [])
+    }, [checkUpdate])
     return selectedValueRef.current.value
   }
 
@@ -170,7 +168,7 @@ const createContextsGroup = () => <
       ) => any
     >(
       selector: Selector,
-      ...args: GetSelectorParam<Selector>
+      ...args: Get3rdParams<Selector>
     ) => {
       const [params] = args
       // am using useState to not define the initial state again

@@ -1,15 +1,22 @@
 declare module 'types' {
-  // import { Subscription } from 'rx-subject'
-  export type GetRequestParams<Request> = Request extends (
-    utils: any,
-    ...args: infer Params
+  export type Get2ndParams<Selector> = Selector extends (
+    state: any,
+    ...params: infer Params
   ) => any
-    ? Params
+    ? Params[0] extends undefined
+      ? []
+      : [Params[0]]
     : []
 
-  // export type RequestWithoutParams = (
-  //   utils: RequestUtilsStart<undefined>
-  // ) => Promise<void | false>
+  export type Get3rdParams<Selector> = Selector extends (
+    param1: any,
+    reqs: any,
+    ...params: infer Params
+  ) => any
+    ? Params[0] extends undefined
+      ? []
+      : Params
+    : []
 
   export type Request<Params extends [any]> = (
     utils: RequestUtilsStart<Params[0]>,
@@ -147,7 +154,10 @@ declare module 'types' {
       }
     }
   }
-  export type ProcessingType = 'Queue' | 'MultiProcesses' | 'SingleProcess'
+  export type ProcessingType =
+    | 'QueueProcessing'
+    | 'MultiProcessing'
+    | 'SingleProcessing'
   // export type RequestInfoRecord = Record<any, RequestInfo>;
 
   // *******  ******  ******* \\
@@ -224,8 +234,9 @@ declare module 'types' {
     // getContextState: () => ContextState<State>;
     getRequestState: <Params = any>(key: keyof Requests) => RequestState<Params>
     getRequestsState: () => {
-      [K in keyof Requests]: RequestState<GetRequestParams<Requests[K]>>
+      [K in keyof Requests]: RequestState<Get2ndParams<Requests[K]>>
     }
+    resetRequest: <Key extends keyof Requests>(requestName: Key) => void
     clearErrors: (
       selector?: keyof Requests | ((requestState: RequestState) => boolean)
     ) => void
@@ -292,10 +303,10 @@ declare module 'types' {
   // ******* ******** ******* \\
   // ******* ******** ******* \\
   export interface ActionPayload {
+    ON_RESET_REQUEST: { requestName: string }
     ON_STATE: {}
     ON_SUSPEND: { requestName: string; processId: string }
     ON_START: {
-      // processingType: ProcessingType;
       requestName: string
       processId: string
     }
@@ -305,13 +316,11 @@ declare module 'types' {
       keepInState: boolean
     }
     ON_ABORT: {
-      // processingType: ProcessingType;
       requestName: string
       reason?: any
       processId: string
     }
     ON_ABORT_GROUP: {
-      // processingType: ProcessingType;
       requestName: string
       reason?: any
       processIds: string[]
@@ -338,16 +347,6 @@ declare module 'types' {
     type: ActionType
     payload: K extends ActionType ? ActionPayload[K] : any
   }
-
-  export type GetSelectorParam<Selector> = Selector extends (
-    param1: any,
-    reqs: any,
-    ...params: infer Params
-  ) => any
-    ? Params[0] extends undefined
-      ? []
-      : Params
-    : []
 }
 
 declare module 'uniqid'

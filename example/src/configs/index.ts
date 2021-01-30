@@ -7,7 +7,7 @@ const getRandomType = () => {
   return getRandomNumber(10) > 3 ? 'success' : 'error'
 }
 
-const getRandomNumber = (max: number = 5) => {
+export const getRandomNumber = (max: number = 5) => {
   return Math.round(Math.random() * max)
 }
 

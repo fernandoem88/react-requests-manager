@@ -23,6 +23,12 @@ enum ExcludedFromProcess {
 
 export const copy = <V>(value: V) => produce(value, () => {}) as V
 
+export const isCancellableStatus = (status: ProcessStatus) => {
+  return (
+    status === 'created' || status === 'suspended' || status === 'processing'
+  )
+}
+
 export const mapRecord = <
   Rec extends Record<any, any> | Dictionary<any>,
   Mapper extends (value: Rec[keyof Rec], key: keyof Rec) => any
@@ -116,7 +122,9 @@ const getHelpers = (store: Store, contextId: string) => {
         name: requestInfo.name,
         context: getContextName(),
         count,
-        processes: ids.map((id) => converProcessInfoToState(byId[id]))
+        processes: ids
+          .map((id) => converProcessInfoToState(byId[id]))
+          .filter((pcss) => pcss.status !== 'created')
       }
     }
 
@@ -350,7 +358,7 @@ const getHelpers = (store: Store, contextId: string) => {
 
   const startNextProcessInqueue = (reqName: string) => {
     const req = getRequestInfo(reqName)
-    if (req.type !== 'Queue') return
+    if (req.type !== 'QueueProcessing') return
     const { byId, ids } = req.processes
     const [processingId] = ids.filter(
       (reqId) => byId[reqId].status === 'processing'
@@ -368,24 +376,48 @@ const getHelpers = (store: Store, contextId: string) => {
   const resetRequest = (reqName: string) => {
     const req = getRequestInfo(reqName)
     if (req.isProcessing) return
-    req.processes.ids.forEach(deleteAbortInfo)
+    // req.processes.ids.forEach(deleteAbortInfo)
     modifyRequestInfo(reqName, (draft) => {
       if (draft.isProcessing) return
+      draft.totalCreated = 0
       draft.processes.ids = []
       draft.processes.byId = {}
-      draft.totalCreated = 0
+
+      // draft.totalCreated = 0
+      // const { ids, byId } = draft.processes
+      // const processIds: string[] = []
+      // const processObj = {} as any
+
+      // ids.forEach((id) => {
+      //   const { status } = byId[id]
+      //   const isActive = ['created', 'suspended', 'processing'].includes(status)
+      //   if (isActive) {
+      //     processIds.push(id)
+      //     processObj[id] = byId[id]
+      //     draft.totalCreated += 1
+      //   }
+      // })
+      // draft.processes.ids = processIds
+      // draft.processes.byId = processObj
     })
+  }
+
+  const clearAbortInfo = (reqName: string) => {
+    const req = getRequestInfo(reqName)
+    if (req.isProcessing) return
+    req.processes.ids.forEach(deleteAbortInfo)
   }
 
   // after state changed: Post processing
   const dispatchToHooks = <K extends ActionType>(
     { type, payload }: Action<K>,
-    skipdispatch?: boolean
+    skipDispatch?: boolean
   ) => {
     setTimeout(() => {
       const dispatcher = getDispatcher()
       const subscribersCount = getSubscribersCount()
-      if (subscribersCount > 0 && !skipdispatch) {
+      if (subscribersCount > 0 && !skipDispatch) {
+        console.log({ type, payload, contextId })
         dispatcher.next({ type, payload, contextId })
       }
       // post dispatch
@@ -424,7 +456,7 @@ const getHelpers = (store: Store, contextId: string) => {
             }
           }
           startNextProcessInqueue(pl.requestName)
-          resetRequest(pl.requestName)
+          clearAbortInfo(pl.requestName)
           break
         }
         case 'ON_ABORT':
@@ -433,7 +465,7 @@ const getHelpers = (store: Store, contextId: string) => {
             const { requestName, processId } = pl
             doAbort(requestName, processId)
             startNextProcessInqueue(pl.requestName)
-            resetRequest(pl.requestName)
+            clearAbortInfo(pl.requestName)
           }
           break
         case 'ON_ABORT_GROUP':
@@ -442,7 +474,7 @@ const getHelpers = (store: Store, contextId: string) => {
             const { requestName, processIds } = pl
             doAbortGroup(requestName, processIds)
             startNextProcessInqueue(pl.requestName)
-            resetRequest(pl.requestName)
+            clearAbortInfo(pl.requestName)
           }
           break
         case 'ON_CANCEL':
@@ -455,7 +487,7 @@ const getHelpers = (store: Store, contextId: string) => {
             }
             deleteResolver(pl.processId)
             startNextProcessInqueue(pl.requestName)
-            resetRequest(pl.requestName)
+            clearAbortInfo(pl.requestName)
           }
           break
         default:
@@ -500,7 +532,8 @@ const getHelpers = (store: Store, contextId: string) => {
     getContextName,
     getSubscribersCount,
     getDispatcher,
-    addAbortInfo
+    addAbortInfo,
+    resetRequest
   }
 }
 

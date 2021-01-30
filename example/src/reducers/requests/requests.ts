@@ -3,12 +3,16 @@ import { configsUtils } from '../../configs'
 // import { ActionType } from '.'
 const { getConfig } = configsUtils
 const { api } = getConfig()
-
-export const singleRequest = Single(async (utils, delay?: number) => {
+type Params = { delay?: number; index: number }
+export const singleRequest = Single(async (utils, params: Params) => {
+  // const t = false as any
+  // if (!t) {
+  //   utils.cancel()
+  // }
   utils.start(() => {
     // on start logic
   })
-  const { abort, execute } = api.testRequest(delay)
+  const { abort, execute } = api.testRequest(params.delay)
   utils.onAbort(() => {
     abort()
   })
@@ -25,11 +29,12 @@ export const singleRequest = Single(async (utils, delay?: number) => {
   }
 })
 
-export const multiRequest = Multi(async (utils, delay?: number) => {
+// tslint-disable-next-line
+export const multiRequest = Multi(async (utils, params: Params) => {
   utils.start(() => {
     // on start logic
   })
-  const { abort, execute } = api.testRequest(delay)
+  const { abort, execute } = api.testRequest(params.delay)
   utils.onAbort(() => {
     abort()
   })
@@ -46,11 +51,12 @@ export const multiRequest = Multi(async (utils, delay?: number) => {
   }
 })
 
-export const queueRquest = Queue(async (utils, delay?: number) => {
+export const queueRequest = Queue(async (utils, params: Params) => {
   await utils.inQueue(() => {
     // on start logic
+    console.log('started')
   })
-  const { abort, execute } = api.testRequest(delay)
+  const { abort, execute } = api.testRequest(params.delay)
   utils.onAbort(() => {
     abort()
   })

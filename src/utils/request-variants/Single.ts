@@ -1,4 +1,4 @@
-import { Store, RequestUtilsStart, GetRequestParams, Request } from 'types'
+import { Store, RequestUtilsStart, Get2ndParams, Request } from 'types'
 
 export default () =>
   function Single<
@@ -14,7 +14,7 @@ export default () =>
     return async function SingleProcessing(
       this: { contextId: string; requestName: string; store: Store },
       utils: RequestUtilsStart<Params>,
-      ...params: GetRequestParams<SingleRequest>
+      ...params: Get2ndParams<SingleRequest>
     ) {
       const contextId = this.contextId
       const store = this.store
@@ -39,5 +39,5 @@ export default () =>
           }
           throw err
         })
-    } as Request<GetRequestParams<SingleRequest>>
+    } as Request<Get2ndParams<SingleRequest>>
   }

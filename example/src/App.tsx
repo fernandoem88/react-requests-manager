@@ -1,12 +1,13 @@
 import React from 'react'
 import RequestItem from './components/RequestItem'
 
-import {} from 'react-requests-manager'
+// import {} from 'react-requests-manager'
 
 const App = React.memo((props) => {
   return (
     <div>
-      <RequestItem duration={3} /> {props.children}
+      <RequestItem requestName={'queueRequest'} />
+      {props.children}
     </div>
   )
 })

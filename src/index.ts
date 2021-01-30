@@ -5,6 +5,8 @@ export {
   RequestUtilsStart,
   RequestState,
   ProcessState,
+  ProcessStatus,
+  ProcessingType,
   Request
 } from 'types'
 

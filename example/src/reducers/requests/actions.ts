@@ -16,5 +16,5 @@ export const abortMulti: Action<string> = (utils, id) => {
 }
 
 export const abortQueue: Action<string | undefined> = (utils, id) => {
-  utils.abort('queueRquest', (pcss) => pcss.id === id)
+  utils.abort('queueRequest', (pcss) => pcss.id === id)
 }

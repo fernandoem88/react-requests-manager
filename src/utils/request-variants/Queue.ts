@@ -2,7 +2,7 @@ import {
   Store,
   RequestUtilsQueue,
   RequestUtilsStart,
-  GetRequestParams,
+  Get2ndParams,
   Request
 } from 'types'
 import getHelpers from '../helpers'
@@ -27,7 +27,7 @@ export default () =>
     ): RequestUtilsQueue<Params> => {
       const helpers = getHelpers(store, contextId)
       helpers.modifyRequestInfo(requestName, (draft) => {
-        draft.type = 'Queue'
+        draft.type = 'QueueProcessing'
       })
 
       const addToQueue = (
@@ -81,7 +81,7 @@ export default () =>
     return async function Queue(
       this: { contextId: string; requestName: string; store: Store },
       utils: RequestUtilsStart<Params>,
-      ...params: GetRequestParams<QueueRequest>
+      ...params: Get2ndParams<QueueRequest>
     ) {
       const contextId = this.contextId
       const requestName = this.requestName
@@ -108,5 +108,5 @@ export default () =>
           }
           throw err
         })
-    } as Request<GetRequestParams<QueueRequest>>
+    } as Request<Get2ndParams<QueueRequest>>
   }

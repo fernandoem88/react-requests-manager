@@ -8,7 +8,7 @@ import {
   RequestState,
   ContextInfo
 } from 'types'
-import getHelpers, { mapRecord } from './helpers'
+import getHelpers, { mapRecord, isCancellableStatus } from './helpers'
 import getReducer from './reducer'
 
 const createRequests = () => <
@@ -58,7 +58,7 @@ const createRequests = () => <
         const requestInfo: RequestInfo<any> = {
           id: uniqid('RequestId__'),
           totalCreated: 0,
-          type: 'SingleProcess',
+          type: 'SingleProcessing',
           isProcessing: false,
           name: name as string,
           contextId,
@@ -72,6 +72,8 @@ const createRequests = () => <
     }
 
     // initializeRequests();
+
+    // ****** REQUEST UTILS ********
 
     const getRequestUtils = (
       requestName: RequestKey,
@@ -153,16 +155,17 @@ const createRequests = () => <
           processes: { byId }
         } = req
         const { status } = byId[processId]
-        if (status !== 'created' && status !== 'processing') return
+        if (!isCancellableStatus(status)) {
+          return
+        }
         const keepInState = !!(options && options.keepInStateOnCancel)
         const payload = { requestName: reqName, processId, keepInState }
 
         const proceed = stateReducer.ON_CANCEL(payload)
         if (!proceed) return
-        helpers.dispatchToHooks(
-          { type: 'ON_CANCEL', payload },
-          !!this.skipDispatch
-        )
+        const skipDispatch = !keepInState || !!this.skipDispatch
+
+        helpers.dispatchToHooks({ type: 'ON_CANCEL', payload }, skipDispatch)
         throw new Error('ON_CANCEL')
       }
 
@@ -220,6 +223,8 @@ const createRequests = () => <
     }
 
     const createProcess = (requestName: string, params: any) => {
+      // clear previous request data and dispatch if necessary
+      ACTION_UTILS.resetRequest(requestName)
       const requestIfo = helpers.getRequestInfo(requestName)
       const processId = uniqid('ProcessId__')
       const process: ProcessInfo = {
@@ -268,6 +273,20 @@ const createRequests = () => <
         }) as typeof requestCreator
         const promise = __requestCreator__(requestUtils, params)
         handleRequestErrors(process.id, promise, requestUtils.cancel)
+        const { status } = requestUtils.getProcessState()
+
+        if (status === 'created' || status === 'cancelled') {
+          // to show only for dev
+          const description =
+            status === 'cancelled'
+              ? 'was cancelled after being created'
+              : 'did not started properly'
+          console.warn(
+            `Warning on ${requestName} request: process with id ${process.id} ${description}`
+          )
+          return undefined
+        }
+
         return process.id
       }
     }
@@ -297,25 +316,19 @@ const createRequests = () => <
     }
 
     const requests: {
-      [K in RequestKey]: (...params: RequestsParams<K>) => string
+      [K in RequestKey]: (...params: RequestsParams<K>) => string | undefined
     } = mapRecord(requestsConfigs.requests, (requestCreator, requestName) => {
       return createRequest(requestName as string, requestCreator)
     }) as any
 
-    /**
-     * @description create actions
-     * @param actionCreator
-     */
-    const createAction = <
-      ActionCreator extends (utils: ActionUtils<Requests>, params: any) => void
-    >(
-      actionCreator: ActionCreator
-    ) => {
+    const getActionUtils = (): ActionUtils<any> => {
       type AU = ActionUtils<any>
-      type AParams = ActionCreator extends (u: any, ...params: infer P) => any
-        ? P
-        : []
-
+      const resetRequest: AU['resetRequest'] = (requestName: any) => {
+        const payload = { requestName }
+        const proceed = stateReducer.ON_RESET_REQUEST(payload)
+        if (!proceed) return
+        helpers.dispatchToHooks({ type: 'ON_RESET_REQUEST', payload })
+      }
       const getRequestState = (reqName: any) => helpers.getRequestState(reqName)
       const getRequestsState = () => {
         return mapRecord(
@@ -323,6 +336,7 @@ const createRequests = () => <
           helpers.converters.requestToState
         ) as any
       }
+
       const clearErrors: AU['clearErrors'] = (selector) => {
         const { requests } = helpers.getContextInfo()
         if (!selector || typeof selector === 'function') {
@@ -380,14 +394,29 @@ const createRequests = () => <
           }
         }
       }
-      const actionUtils: ActionUtils<Requests> = {
+      return {
         getRequestState,
         getRequestsState,
+        resetRequest,
         clearErrors,
         abort
       }
+    }
+    const ACTION_UTILS: ActionUtils<Requests> = getActionUtils()
+    /**
+     * @description create actions
+     * @param actionCreator
+     */
+    const createAction = <
+      ActionCreator extends (utils: ActionUtils<Requests>, params: any) => void
+    >(
+      actionCreator: ActionCreator
+    ) => {
+      type AParams = ActionCreator extends (u: any, ...params: infer P) => any
+        ? P
+        : []
       return (...params: AParams) => {
-        actionCreator(actionUtils, params[0])
+        actionCreator(ACTION_UTILS, params[0])
       }
     }
     // const { reducers } = reducersConfigs;

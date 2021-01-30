@@ -6,7 +6,7 @@ import {
   RequestInfo,
   Store
 } from 'types'
-import getHelpers from './helpers'
+import getHelpers, { isCancellableStatus } from './helpers'
 
 const getReducer = (store: Store, contextId: string) => {
   const helpers = getHelpers(store, contextId)
@@ -20,7 +20,7 @@ const getReducer = (store: Store, contextId: string) => {
       0
     const requestType = helpers.getRequestType(requestName as any)
     const hasSuspendedProcesss =
-      requestType !== 'Queue'
+      requestType !== 'QueueProcessing'
         ? false
         : processIds.filter((id) => processes[id].status === 'suspended')
             .length > 0
@@ -31,6 +31,13 @@ const getReducer = (store: Store, contextId: string) => {
       payload: ActionPayload[T]
     ) => boolean
   } = {
+    ON_RESET_REQUEST(payload) {
+      const { requestName } = payload
+      const { isProcessing } = helpers.getRequestState(requestName)
+      if (isProcessing) return false
+      helpers.resetRequest(requestName)
+      return true
+    },
     ON_START(payload) {
       const { requestName, processId } = payload
       helpers.modifyRequestInfo(requestName as string, (draft) => {
@@ -38,7 +45,6 @@ const getReducer = (store: Store, contextId: string) => {
         byId[processId].status = 'processing'
         draft.isProcessing = true
       })
-
       return true
     },
     ON_ABORT(payload) {
@@ -105,7 +111,7 @@ const getReducer = (store: Store, contextId: string) => {
         byId[processId].status = status
 
         byId[processId].metadata = metadata || {}
-        if (processingType === 'SingleProcess') {
+        if (processingType === 'SingleProcessing') {
           draft.isProcessing = false
           ids.forEach((reqId) => {
             if (reqId !== processId) {
@@ -127,13 +133,10 @@ const getReducer = (store: Store, contextId: string) => {
       const { requestName, processId, keepInState } = payload
       const process = helpers.getProcessInfo(requestName as string, processId)
       const { status } = process
-      if (
-        status !== 'processing' &&
-        status !== 'suspended' &&
-        status !== 'created'
-      ) {
+      if (!isCancellableStatus(status)) {
         return false
       }
+
       helpers.modifyRequestInfo(requestName as string, (draft: RequestInfo) => {
         const { byId, ids } = draft.processes
         byId[processId].status = 'cancelled'

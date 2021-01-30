@@ -1,4 +1,4 @@
-import { Store, RequestUtilsStart, GetRequestParams, Request } from 'types'
+import { Store, RequestUtilsStart, Get2ndParams, Request } from 'types'
 import getHelpers from '../helpers'
 
 export default () =>
@@ -15,7 +15,7 @@ export default () =>
     return async function MultiProcessing(
       this: { contextId: string; requestName: string; store: Store },
       utils: RequestUtilsStart<Params>,
-      ...params: GetRequestParams<MultiRequest>
+      ...params: Get2ndParams<MultiRequest>
     ) {
       const contextId = this.contextId
       const requestName = this.requestName
@@ -28,7 +28,7 @@ export default () =>
       }
       const helpers = getHelpers(store, contextId)
       helpers.modifyRequestInfo(requestName, (draft) => {
-        draft.type = 'MultiProcesses'
+        draft.type = 'MultiProcessing'
       })
       const prom = request(utils, params[0])
       // handle cancel
@@ -44,5 +44,5 @@ export default () =>
           }
           throw err
         })
-    } as Request<GetRequestParams<MultiRequest>>
+    } as Request<Get2ndParams<MultiRequest>>
   }
