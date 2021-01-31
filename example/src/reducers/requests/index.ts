@@ -6,6 +6,9 @@ export const testConfigurator = createRequests(
   { requests },
   {
     actions: {
+      reset(utils, requestName: keyof typeof requests) {
+        utils.resetRequest(requestName)
+      },
       clearError(utils, requestName: keyof typeof requests) {
         utils.clearErrors(requestName)
       },
@@ -14,7 +17,9 @@ export const testConfigurator = createRequests(
         params: { requestName: keyof typeof requests; id?: string }
       ) {
         const { requestName, id } = params
-        utils.abort(requestName, !id ? undefined : (pcss) => pcss.id === id)
+        utils.abort(requestName, (pcss) => pcss.id === id, {
+          keepInStateOnAbort: false
+        })
       },
       abortAll(utils) {
         utils.abort()

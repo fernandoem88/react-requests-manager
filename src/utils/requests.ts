@@ -24,7 +24,7 @@ const createRequests = () => <
   requestsConfigs: { requests: Requests },
   actionsConfigs?: { actions: Actions }
 ) => {
-  return (store: Store, name: string) => {
+  return (store: Store, contextName: string) => {
     type RequestKey = keyof Requests
     type RequestsParams<K extends RequestKey> = Requests[K] extends (
       utils: any,
@@ -49,7 +49,7 @@ const createRequests = () => <
     const initializeRequests = () => {
       const initialContext: ContextInfo<any> = {
         requests: {},
-        name,
+        name: contextName,
         id: contextId,
         subscribersCount: 0
       }
@@ -170,16 +170,16 @@ const createRequests = () => <
       }
 
       const onAbort: RequestUtilsStart<any>['onAbort'] = (
-        callback,
-        options
+        callback
+        // options
       ) => {
         helpers.addAbortInfo(processId, callback)
-        if (options?.keepInStateOnAbort) {
-          helpers.modifyRequestInfo(requestName as string, (draft) => {
-            // draft.persistableProcessesOnAbort.push(processId);
-            draft.processes.byId[processId].keepInStateOnAbort = true
-          })
-        }
+        // if (options?.keepInStateOnAbort) {
+        //   helpers.modifyRequestInfo(requestName as string, (draft) => {
+        //     // draft.persistableProcessesOnAbort.push(processId);
+        //     draft.processes.byId[processId].keepInStateOnAbort = true
+        //   })
+        // }
       }
 
       const clearError: RequestUtilsStart<any>['clearError'] = () => {
@@ -361,14 +361,29 @@ const createRequests = () => <
           helpers.dispatchToHooks({ type: 'ON_CLEAR', payload })
         }
       }
-      const abort: AU['abort'] = (reqName, selector) => {
+      const abort: AU['abort'] = (reqName, selector, options) => {
         const { requests } = helpers.getContextInfo()
+        const setKeepInState = (reqIds: string[]) => {
+          if (!reqIds.length) return
+          if (options?.keepInStateOnAbort) {
+            helpers.modifyRequestInfo(reqName as string, (draft) => {
+              const { byId } = draft.processes
+              reqIds.forEach((id) => {
+                if (byId[id]) {
+                  byId[id].keepInStateOnAbort = true
+                }
+              })
+            })
+          }
+        }
         if (!reqName) {
+          // abort all requests
           Object.entries(requests).forEach(([name, req]) => {
             const payload = {
               requestName: name,
               processIds: req.processes.ids
             }
+            setKeepInState(req.processes.ids)
             const proceed = stateReducer.ON_ABORT_GROUP(payload)
             if (proceed) {
               helpers.dispatchToHooks({ type: 'ON_ABORT_GROUP', payload })
@@ -384,6 +399,7 @@ const createRequests = () => <
                 )
             )
             .map(([id]) => id)
+          setKeepInState(ids)
           const payload = {
             requestName: reqName as string,
             processIds: ids

@@ -417,7 +417,6 @@ const getHelpers = (store: Store, contextId: string) => {
       const dispatcher = getDispatcher()
       const subscribersCount = getSubscribersCount()
       if (subscribersCount > 0 && !skipDispatch) {
-        console.log({ type, payload, contextId })
         dispatcher.next({ type, payload, contextId })
       }
       // post dispatch

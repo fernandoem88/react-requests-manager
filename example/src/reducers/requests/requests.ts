@@ -54,7 +54,6 @@ export const multiRequest = Multi(async (utils, params: Params) => {
 export const queueRequest = Queue(async (utils, params: Params) => {
   await utils.inQueue(() => {
     // on start logic
-    console.log('started')
   })
   const { abort, execute } = api.testRequest(params.delay)
   utils.onAbort(() => {

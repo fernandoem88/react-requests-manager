@@ -14,7 +14,7 @@ export const Root = styled.div.attrs({
   & .request-track-0 {
     background: ${(p) =>
       p.status === 'processing'
-        ? '#9bd69b'
+        ? '#888'
         : p.status === 'suspended'
         ? 'purple'
         : p.status === 'aborted'

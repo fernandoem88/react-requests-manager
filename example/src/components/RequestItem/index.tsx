@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import uniqid from 'uniqid'
 
-import { Root } from './styled'
+import { Root, Header } from './styled'
 
 import { $$, useRequests } from '../../reducers/requests'
 import ProcessItem from '../ProcessItem'
@@ -22,10 +22,19 @@ const RequestItem: React.FC<Props> = (props) => {
 
   return (
     <Root>
-      <div>
-        {props.requestName}
-        {req.isProcessing ? ' is processing' : ''}
-      </div>
+      <Header>
+        <div>{props.requestName}</div>
+        <div>
+          {req.isProcessing ? (
+            ' is processing'
+          ) : (
+            <div onClick={() => $$.actions.reset(props.requestName)}>
+              {' '}
+              Reset
+            </div>
+          )}
+        </div>
+      </Header>
       <div>
         {ids.map((id, index) => (
           <ProcessItem

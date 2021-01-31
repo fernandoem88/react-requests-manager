@@ -236,13 +236,17 @@ declare module 'types' {
     getRequestsState: () => {
       [K in keyof Requests]: RequestState<Get2ndParams<Requests[K]>>
     }
-    resetRequest: <Key extends keyof Requests>(requestName: Key) => void
+    /**
+     * @description delete previous request data only if the given request is not in processing state
+     */
+    resetRequest: (requestName: keyof Requests) => void
     clearErrors: (
       selector?: keyof Requests | ((requestState: RequestState) => boolean)
     ) => void
     abort: <Key extends keyof Requests, Params = any>(
       requestName?: Key,
-      selector?: (process: ProcessState<Params>, index: number) => boolean
+      selector?: (process: ProcessState<Params>, index: number) => boolean,
+      options?: { keepInStateOnAbort: boolean }
     ) => void
   }
   export interface RequestUtils<Params = any> {
@@ -278,8 +282,8 @@ declare module 'types' {
       selector?: (process: ProcessState<Params>, index: number) => boolean
     ) => void
     onAbort: (
-      callback: () => void,
-      options?: { keepInStateOnAbort?: boolean }
+      callback: () => void
+      // options?: { keepInStateOnAbort?: boolean }
     ) => void
     // __reducers: Reducers;
   }
@@ -319,11 +323,13 @@ declare module 'types' {
       requestName: string
       reason?: any
       processId: string
+      keepInState?: boolean
     }
     ON_ABORT_GROUP: {
       requestName: string
       reason?: any
       processIds: string[]
+      keepInState?: boolean
     }
     ON_FINISH: {
       requestName: string

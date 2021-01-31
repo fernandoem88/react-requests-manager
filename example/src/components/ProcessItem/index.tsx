@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState } from 'react'
 import ReactSlider from 'react-slider'
 
 import { Root } from './styled'
@@ -27,7 +27,8 @@ const RequestItem: React.FC<Props> = React.memo((props) => {
   const isEnded = !!(
     process?.status === 'success' || process?.status === 'error'
   )
-  // const isStopped = !!(process?.status === 'aborted')
+  const isSuspended = !!(process?.status === 'suspended')
+  const isAborted = !!(process?.status === 'aborted')
   useEffect(() => {
     if (isEnded) {
       setValue(100)
@@ -36,7 +37,6 @@ const RequestItem: React.FC<Props> = React.memo((props) => {
   }, [isEnded])
   useEffect(() => {
     if (!isProcessing) return
-
     let d = duration
     const ti = setInterval(() => {
       setTimer((t) => {
@@ -75,25 +75,12 @@ const RequestItem: React.FC<Props> = React.memo((props) => {
 
   useEffect(() => {
     if (!process) {
-      setProcessId((v) => (!!v ? undefined : v))
-      return
+      setProcessId(undefined)
+      setTimer(duration)
     }
-    console.log(process.status)
   }, [process, duration])
 
-  const appearanceRef = useRef<any>('initial')
-  useEffect(() => {
-    appearanceRef.current = 'initial'
-  }, [props.version])
-  if (process) {
-    appearanceRef.current = isProcessing
-      ? 'started'
-      : isEnded
-      ? 'done'
-      : 'stopped'
-  }
   const processingStatus = process?.status
-  const { current: appearance } = appearanceRef
 
   const handleStart = () => {
     const pcssId = $$.requests[requestName]({
@@ -128,8 +115,8 @@ const RequestItem: React.FC<Props> = React.memo((props) => {
               return <div {...thumbProps} />
             return (
               <div {...thumbProps}>
-                {appearance === 'done' || appearance === 'stopped'
-                  ? state.valueNow + '%'
+                {isEnded || isAborted || isSuspended
+                  ? `${process?.status || ''} ${state.valueNow}% `
                   : ''}
               </div>
             )
@@ -140,8 +127,8 @@ const RequestItem: React.FC<Props> = React.memo((props) => {
         {timer}
       </div>
       <div>
-        <div onClick={isProcessing ? handleAbort : handleStart}>
-          {isProcessing ? 'abort' : 'start'}
+        <div onClick={isProcessing || isSuspended ? handleAbort : handleStart}>
+          {isProcessing || isSuspended ? 'abort' : 'start'}
         </div>
       </div>
     </Root>

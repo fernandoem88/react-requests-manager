@@ -48,7 +48,7 @@ const getReducer = (store: Store, contextId: string) => {
       return true
     },
     ON_ABORT(payload) {
-      const { requestName, processId, reason } = payload
+      const { requestName, processId, reason, keepInState } = payload
       const process = helpers.getProcessInfo(requestName as string, processId)
       if (!process) return false
       const { status } = process
@@ -58,6 +58,11 @@ const getReducer = (store: Store, contextId: string) => {
       helpers.modifyRequestInfo(requestName as string, (draft) => {
         const { byId, ids } = draft.processes
         byId[processId].status = 'aborted'
+        if (keepInState !== undefined) {
+          ids.forEach((id) => {
+            byId[id].keepInStateOnAbort = keepInState
+          })
+        }
         if (reason) {
           const { metadata } = byId[processId]
           metadata.abortReason = reason
@@ -68,9 +73,14 @@ const getReducer = (store: Store, contextId: string) => {
       return true
     },
     ON_ABORT_GROUP(payload) {
-      const { requestName, processIds, reason } = payload
+      const { requestName, processIds, reason, keepInState } = payload
       const results = processIds.map((id) =>
-        processReducer.ON_ABORT({ requestName, processId: id, reason })
+        processReducer.ON_ABORT({
+          requestName,
+          processId: id,
+          reason,
+          keepInState
+        })
       )
       return results.some((bool) => bool)
     },
