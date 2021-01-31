@@ -25,6 +25,11 @@ class Example extends Component {
 }
 ```
 
+# abort
+
+by default all started or suspended process are kept in state when aborted
+you can still change it when you call abort or abortPrevious
+
 ## License
 
-MIT © [fernando ekutsu mondele](https://github.com/fernando ekutsu mondele)
+MIT © [fernando ekutsu mondele](https://github.com/fernandoem88/react-requests-manager)

@@ -15,16 +15,18 @@ const createRequests = () => <
   Requests extends Record<
     any,
     (utils: RequestUtilsStart<any>, params: any) => Promise<void | false>
-  >,
-  Actions extends Record<
-    any,
-    (utils: ActionUtils<Requests>, params: any) => void
   >
+  // Actions extends Record<
+  //   any,
+  //   (utils: ActionUtils<Requests>, params: any) => void
+  // >
 >(
-  requestsConfigs: { requests: Requests },
-  actionsConfigs?: { actions: Actions }
+  requestsRegister: Requests
+  // requestsConfigs: { requests: Requests },
+  // actionsConfigs?: { actions: Actions }
 ) => {
-  return (store: Store, contextName: string) => {
+  let requestsUtils: ActionUtils<Requests> = {} as any
+  const configurator = (store: Store, contextName: string) => {
     type RequestKey = keyof Requests
     type RequestsParams<K extends RequestKey> = Requests[K] extends (
       utils: any,
@@ -33,13 +35,13 @@ const createRequests = () => <
       ? Params
       : []
 
-    type ActionKey = keyof Actions
-    type ActionsParams<K extends ActionKey> = Actions[K] extends (
-      utils: any,
-      ...args: infer Params
-    ) => any
-      ? Params
-      : []
+    // type ActionKey = keyof Actions
+    // type ActionsParams<K extends ActionKey> = Actions[K] extends (
+    //   utils: any,
+    //   ...args: infer Params
+    // ) => any
+    //   ? Params
+    //   : []
 
     const contextId = uniqid('ContextId__')
     const helpers = getHelpers(store, contextId)
@@ -54,7 +56,7 @@ const createRequests = () => <
         subscribersCount: 0
       }
       helpers.setContextInfo(initialContext)
-      const requestsInfo = mapRecord(requestsConfigs.requests, (_, name) => {
+      const requestsInfo = mapRecord(requestsRegister, (_, name) => {
         const requestInfo: RequestInfo<any> = {
           id: uniqid('RequestId__'),
           totalCreated: 0,
@@ -313,7 +315,7 @@ const createRequests = () => <
 
     const requests: {
       [K in RequestKey]: (...params: RequestsParams<K>) => string | undefined
-    } = mapRecord(requestsConfigs.requests, (requestCreator, requestName) => {
+    } = mapRecord(requestsRegister, (requestCreator, requestName) => {
       return createRequest(requestName as string, requestCreator)
     }) as any
 
@@ -408,35 +410,37 @@ const createRequests = () => <
       }
     }
     const ACTION_UTILS: ActionUtils<Requests> = getActionUtils()
-    /**
-     * @description create actions
-     * @param actionCreator
-     */
-    const createAction = <
-      ActionCreator extends (utils: ActionUtils<Requests>, params: any) => void
-    >(
-      actionCreator: ActionCreator
-    ) => {
-      type AParams = ActionCreator extends (u: any, ...params: infer P) => any
-        ? P
-        : []
-      return (...params: AParams) => {
-        actionCreator(ACTION_UTILS, params[0])
-      }
-    }
-    const actions: ActionKey extends undefined
-      ? {}
-      : {
-          [K in ActionKey]: (...params: ActionsParams<K>) => void
-        } = !actionsConfigs
-      ? {}
-      : (mapRecord(actionsConfigs.actions, (actionCreator) => {
-          return createAction(actionCreator)
-        }) as any)
+    requestsUtils = ACTION_UTILS
+    // /**
+    //  * @description create actions
+    //  * @param actionCreator
+    //  */
+    // const createAction = <
+    //   ActionCreator extends (utils: ActionUtils<Requests>, params: any) => void
+    // >(
+    //   actionCreator: ActionCreator
+    // ) => {
+    //   type AParams = ActionCreator extends (u: any, ...params: infer P) => any
+    //     ? P
+    //     : []
+    //   return (...params: AParams) => {
+    //     actionCreator(ACTION_UTILS, params[0])
+    //   }
+    // }
+    // const actions: ActionKey extends undefined
+    //   ? {}
+    //   : {
+    //       [K in ActionKey]: (...params: ActionsParams<K>) => void
+    //     } = !actionsConfigs
+    //   ? {}
+    //   : (mapRecord(actionsConfigs.actions, (actionCreator) => {
+    //       return createAction(actionCreator)
+    //     }) as any)
 
     initializeRequests()
-    return { requests, actions, contextId }
+    return { requests, contextId }
   }
+  return { configurator, utils: requestsUtils }
 }
 
 export default createRequests

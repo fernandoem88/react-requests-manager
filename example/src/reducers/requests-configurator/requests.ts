@@ -54,24 +54,22 @@ export const multiRequest = Multi(async (utils, params: Params) => {
 export const queueRequest = Queue(async (utils, params: Params) => {
   await utils.inQueue(() => {
     // on start logic
+    // utils.clearError()
   })
   const { abort, execute } = api.testRequest(params.delay)
-
+  utils.onAbort(async () => {
+    abort()
+  })
   try {
-    utils.onAbort(async () => {
-      console.log('aborted', utils.getProcessState().id)
-      abort()
-      throw new Error('aborted')
-    })
-    utils.cancel()
     await execute()
     utils.finish('success', () => {
       // dispatch({ type: ActionType.ADD_TODO, payload: result })
+      console.log('error')
     })
   } catch (error) {
     utils.finish({ status: 'error', error }, () => {
       // error logic goes here
-      console.log('error', error)
+      console.log('error', '500: Server Error')
     })
   }
 })

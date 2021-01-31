@@ -6,7 +6,7 @@ import RequestItem from './components/RequestItem'
 const App = React.memo(() => {
   return (
     <div>
-      <RequestItem requestName={'singleRequest'} />
+      <RequestItem requestName={'queueRequest'} />
     </div>
   )
 })

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import ReactSlider from 'react-slider'
 
 import { Root } from './styled'
-import { $$, useRequests } from '../../reducers/requests'
+import { $$, useRequests } from '../../reducers/requests-configurator'
 import { getRandomNumber } from '../../configs'
 
 interface Props {

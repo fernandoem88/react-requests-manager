@@ -1,4 +1,7 @@
 declare module 'types' {
+  type OnFinish = () => void
+  type OnStart = () => void
+  type OnAbortCallback = () => void
   export type Get2ndParams<Selector> = Selector extends (
     state: any,
     ...params: infer Params
@@ -272,27 +275,23 @@ declare module 'types' {
              */
             metadata?: Dictionary<any>
           },
-      onFinish?: () => void
+      onFinish?: OnFinish
     ) => void
     abortPrevious: (
       selector?: (process: ProcessState<Params>, index: number) => boolean,
       options?: { keepInStateOnAbort: boolean }
     ) => void
-    onAbort: (
-      callback: () => void
-      // options?: { keepInStateOnAbort?: boolean }
-    ) => void
-    // __reducers: Reducers;
+    onAbort: (callback: OnAbortCallback) => void
   }
 
   export interface RequestUtilsStart<Params = any>
     extends RequestUtils<Params> {
-    start: (onStart?: () => void) => void
+    start: (onStart?: OnStart) => void
   }
 
   export interface RequestUtilsQueue<Params = any>
     extends RequestUtils<Params> {
-    inQueue: (onStart?: () => void) => Promise<void>
+    inQueue: (onStart?: OnStart) => Promise<void>
   }
 
   // ******* ******** ******* \\
