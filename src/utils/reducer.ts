@@ -4,30 +4,32 @@ import {
   ActionPayload,
   ActionType,
   RequestInfo,
-  Store
+  Store,
+  ProcessStatus
 } from 'types'
 import getHelpers, { isCancellableStatus } from './helpers'
 
 const getReducer = (store: Store, contextId: string) => {
+  const isAbortableStatus = (status: ProcessStatus) =>
+    status === 'processing' || status === 'suspended'
   const helpers = getHelpers(store, contextId)
   const getIsProcessing = (
     requestName: string,
     processes: Dictionary<ProcessInfo>,
     processIds: string[]
   ) => {
-    const isProcessing =
-      processIds.filter((id) => processes[id].status === 'processing').length >
-      0
+    const isProcessing = processIds.some(
+      (id) => processes[id].status === 'processing'
+    )
     const requestType = helpers.getRequestType(requestName as any)
     const hasSuspendedProcesss =
-      requestType !== 'QueueProcessing'
+      requestType !== 'QueueType'
         ? false
-        : processIds.filter((id) => processes[id].status === 'suspended')
-            .length > 0
+        : processIds.some((id) => processes[id].status === 'suspended')
     return isProcessing || hasSuspendedProcesss
   }
   const processReducer: {
-    [T in Exclude<ActionType, 'ON_STATE' | 'ON_SUSPEND'>]: (
+    [T in Exclude<ActionType, 'ON_STATE'>]: (
       payload: ActionPayload[T]
     ) => boolean
   } = {
@@ -38,38 +40,83 @@ const getReducer = (store: Store, contextId: string) => {
       helpers.resetRequest(requestName)
       return true
     },
+    ON_SUSPEND(payload) {
+      const { requestName, processId } = payload
+      let shouldDispatch = true
+      helpers.modifyRequestInfo(requestName, (draft) => {
+        // set status to suspended to show that it is waiting
+        const {
+          isProcessing,
+          processes: { byId }
+        } = draft
+        if (isProcessing) {
+          byId[processId].status = 'suspended'
+          byId[processId].keepInStateOnAbort = true
+        } else {
+          shouldDispatch = false
+        }
+      })
+      return shouldDispatch
+    },
     ON_START(payload) {
       const { requestName, processId } = payload
+      let shouldDispatch = true
       helpers.modifyRequestInfo(requestName as string, (draft) => {
         const { byId } = draft.processes
-        byId[processId].status = 'processing'
-        draft.isProcessing = true
+        const { status } = byId[processId]
+        if (status === 'created' || status === 'suspended') {
+          // by default all started processes are kept in state
+          byId[processId].keepInStateOnAbort = true
+          byId[processId].status = 'processing'
+          draft.isProcessing = true
+        } else {
+          shouldDispatch = false
+        }
       })
-      return true
+      return shouldDispatch
     },
     ON_ABORT(payload) {
       const { requestName, processId, reason, keepInState } = payload
       const process = helpers.getProcessInfo(requestName as string, processId)
       if (!process) return false
       const { status } = process
-      if (status !== 'processing' && status !== 'suspended') {
+      if (!isAbortableStatus(status)) {
+        if (status === 'created') {
+          console.error(
+            requestName,
+            'abort a process after being created is not a good practice, please cancel it by returning false in the request body'
+          )
+          // delete process without dispatch
+          helpers.modifyRequestInfo(requestName as string, (draft) => {
+            const { byId, ids } = draft.processes
+            draft.processes.ids = ids.filter((id) => id !== processId)
+            delete byId[processId]
+          })
+        }
         return false
       }
       helpers.modifyRequestInfo(requestName as string, (draft) => {
         const { byId, ids } = draft.processes
-        byId[processId].status = 'aborted'
-        if (keepInState !== undefined) {
-          ids.forEach((id) => {
-            byId[id].keepInStateOnAbort = keepInState
-          })
+        const process = byId[processId]
+        const keepIt =
+          keepInState !== undefined ? keepInState : process.keepInStateOnAbort
+        if (keepIt) {
+          process.status = 'aborted'
+          if (reason) {
+            const { metadata } = process
+            metadata.abortReason = reason
+          }
+        } else {
+          // if we are not keeping it in state so we should delete it
+          draft.processes.ids = ids.filter((id) => id !== processId)
+          delete byId[processId]
         }
-        if (reason) {
-          const { metadata } = byId[processId]
-          metadata.abortReason = reason
-        }
-        draft.isProcessing = getIsProcessing(requestName as string, byId, ids)
+        draft.isProcessing = getIsProcessing(
+          requestName as string,
+          byId,
+          draft.processes.ids
+        )
       })
-
       return true
     },
     ON_ABORT_GROUP(payload) {
@@ -121,7 +168,7 @@ const getReducer = (store: Store, contextId: string) => {
         byId[processId].status = status
 
         byId[processId].metadata = metadata || {}
-        if (processingType === 'SingleProcessing') {
+        if (processingType === 'SingleType') {
           draft.isProcessing = false
           ids.forEach((reqId) => {
             if (reqId !== processId) {

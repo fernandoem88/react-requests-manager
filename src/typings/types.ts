@@ -18,7 +18,7 @@ declare module 'types' {
       : Params
     : []
 
-  export type Request<Params extends [any]> = (
+  export type Request<Params extends [any] | []> = (
     utils: RequestUtilsStart<Params[0]>,
     ...params: Params
   ) => Promise<void | false>
@@ -154,10 +154,7 @@ declare module 'types' {
       }
     }
   }
-  export type ProcessingType =
-    | 'QueueProcessing'
-    | 'MultiProcessing'
-    | 'SingleProcessing'
+  export type ProcessingType = 'QueueType' | 'MultiType' | 'SingleType'
   // export type RequestInfoRecord = Record<any, RequestInfo>;
 
   // *******  ******  ******* \\
@@ -212,8 +209,7 @@ declare module 'types' {
       info: ContextInfo<any>
       abortInfo: Dictionary<{ callback: () => void }>
       resolvers: Dictionary<{
-        resolver: (onStart?: any) => void
-        onStart?: (reducers: any) => void
+        resolver: () => void
       }>
     }>
     dispatchers: {
@@ -246,7 +242,7 @@ declare module 'types' {
     abort: <Key extends keyof Requests, Params = any>(
       requestName?: Key,
       selector?: (process: ProcessState<Params>, index: number) => boolean,
-      options?: { keepInStateOnAbort: boolean }
+      options?: { keepInStateOnAbort: boolean; reason?: any }
     ) => void
   }
   export interface RequestUtils<Params = any> {
@@ -279,7 +275,8 @@ declare module 'types' {
       onFinish?: () => void
     ) => void
     abortPrevious: (
-      selector?: (process: ProcessState<Params>, index: number) => boolean
+      selector?: (process: ProcessState<Params>, index: number) => boolean,
+      options?: { keepInStateOnAbort: boolean }
     ) => void
     onAbort: (
       callback: () => void

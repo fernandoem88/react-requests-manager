@@ -17,9 +17,7 @@ export const testConfigurator = createRequests(
         params: { requestName: keyof typeof requests; id?: string }
       ) {
         const { requestName, id } = params
-        utils.abort(requestName, (pcss) => pcss.id === id, {
-          keepInStateOnAbort: false
-        })
+        utils.abort(requestName, (pcss) => pcss.id === id)
       },
       abortAll(utils) {
         utils.abort()

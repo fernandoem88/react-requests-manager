@@ -56,18 +56,22 @@ export const queueRequest = Queue(async (utils, params: Params) => {
     // on start logic
   })
   const { abort, execute } = api.testRequest(params.delay)
-  utils.onAbort(() => {
-    abort()
-  })
 
   try {
+    utils.onAbort(async () => {
+      console.log('aborted', utils.getProcessState().id)
+      abort()
+      throw new Error('aborted')
+    })
+    utils.cancel()
     await execute()
     utils.finish('success', () => {
       // dispatch({ type: ActionType.ADD_TODO, payload: result })
     })
   } catch (error) {
-    utils.finish('error', () => {
+    utils.finish({ status: 'error', error }, () => {
       // error logic goes here
+      console.log('error', error)
     })
   }
 })

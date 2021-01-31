@@ -55,13 +55,9 @@ const getHelpers = (store: Store, contextId: string) => {
       store.contexts[context.id].resolvers || {}
   }
 
-  const addResolver = (
-    processId: string,
-    resolver: () => void,
-    onStart?: (reducers: any) => void
-  ) => {
+  const addResolver = (processId: string, resolver: () => void) => {
     const { resolvers } = getContextRef()
-    resolvers[processId] = { resolver, onStart }
+    resolvers[processId] = { resolver }
   }
 
   const deleteResolver = (processId: string) => {
@@ -309,56 +305,38 @@ const getHelpers = (store: Store, contextId: string) => {
    *
    * @param requestName
    * @param processId
-   * @description execute abort callback and remove the process from the request if keepInStateOnAbort = false
+   * @description execute abort callback and remove the processes from the request if keepInStateOnAbort = false
    */
-  const doAbort = (requestName: string, processId: string) => {
-    deleteResolver(processId)
-    const abortInfo = getAbortInfo(processId)
-    if (abortInfo) {
-      abortInfo.callback()
-      deleteAbortInfo(processId)
-    }
-    modifyRequestInfo(requestName, (draft) => {
-      const { byId, ids } = draft.processes
-      if (!byId[processId].keepInStateOnAbort) {
-        delete byId[processId]
-        ids.splice(ids.indexOf(processId), 1)
+  const doAbortGroup = (processIds: string[]) => {
+    processIds.forEach((id) => {
+      const abortInfo = getAbortInfo(id)
+      if (abortInfo) {
+        const { callback } = abortInfo
+        deleteAbortInfo(id)
+        callback()
       }
     })
   }
 
-  /**
-   *
-   * @param requestName
-   * @param processId
-   * @description execute abort callback and remove the processes from the request if keepInStateOnAbort = false
-   */
-  const doAbortGroup = (requestName: string, processIds: string[]) => {
-    processIds.forEach((id) => {
-      deleteResolver(id)
-      const abortInfo = getAbortInfo(id)
-      if (abortInfo) {
-        abortInfo.callback()
-        deleteAbortInfo(id)
-      }
-    })
-
+  const clearAbortedProcesses = (requestName: string, processIds: string[]) => {
+    const set = new Set(processIds)
     modifyRequestInfo(requestName, (draft) => {
-      const { byId, ids } = draft.processes
-      const setToDelete = new Set<string>()
-      processIds.forEach((processId) => {
-        if (!byId[processId].keepInStateOnAbort) {
-          delete byId[processId]
-          setToDelete.add(processId)
+      const { ids, byId } = draft.processes
+      draft.processes.ids = ids.filter((id) => {
+        const { keepInStateOnAbort, status } = byId[id]
+        const keepInState = keepInStateOnAbort
+        const shouldDelete = status === 'aborted' && !keepInState && set.has(id)
+        if (shouldDelete) {
+          delete byId[id]
         }
+        return !shouldDelete
       })
-      draft.processes.ids = ids.filter((id) => !setToDelete.has(id))
     })
   }
 
   const startNextProcessInqueue = (reqName: string) => {
     const req = getRequestInfo(reqName)
-    if (req.type !== 'QueueProcessing') return
+    if (req.type !== 'QueueType') return
     const { byId, ids } = req.processes
     const [processingId] = ids.filter(
       (reqId) => byId[reqId].status === 'processing'
@@ -368,37 +346,19 @@ const getHelpers = (store: Store, contextId: string) => {
       (reqId) => byId[reqId].status === 'suspended'
     )
     if (suspendedId) {
-      const { resolver, onStart } = getResolver(suspendedId)
-      resolver(onStart)
+      const { resolver } = getResolver(suspendedId)
+      resolver()
     }
   }
 
   const resetRequest = (reqName: string) => {
     const req = getRequestInfo(reqName)
     if (req.isProcessing) return
-    // req.processes.ids.forEach(deleteAbortInfo)
     modifyRequestInfo(reqName, (draft) => {
       if (draft.isProcessing) return
       draft.totalCreated = 0
       draft.processes.ids = []
       draft.processes.byId = {}
-
-      // draft.totalCreated = 0
-      // const { ids, byId } = draft.processes
-      // const processIds: string[] = []
-      // const processObj = {} as any
-
-      // ids.forEach((id) => {
-      //   const { status } = byId[id]
-      //   const isActive = ['created', 'suspended', 'processing'].includes(status)
-      //   if (isActive) {
-      //     processIds.push(id)
-      //     processObj[id] = byId[id]
-      //     draft.totalCreated += 1
-      //   }
-      // })
-      // draft.processes.ids = processIds
-      // draft.processes.byId = processObj
     })
   }
 
@@ -416,81 +376,51 @@ const getHelpers = (store: Store, contextId: string) => {
     setTimeout(() => {
       const dispatcher = getDispatcher()
       const subscribersCount = getSubscribersCount()
-      if (subscribersCount > 0 && !skipDispatch) {
-        dispatcher.next({ type, payload, contextId })
-      }
-      // post dispatch
       switch (type) {
         case 'ON_FINISH': {
           const pl = payload as ActionPayload['ON_FINISH']
           const { byId, ids } = getRequestInfo(pl.requestName).processes
           const idsToAbort = ids.filter((id) => byId[id].status === 'aborted')
-          if (idsToAbort.length) {
-            if (idsToAbort.length === 1) {
-              doAbort(pl.requestName, idsToAbort[0])
-              if (subscribersCount > 0) {
-                dispatcher.next({
-                  type: 'ON_ABORT',
-                  payload: {
-                    requestName: pl.requestName,
-                    processId: idsToAbort[0],
-                    reason: 'ON_FINSH'
-                  },
-                  contextId
-                })
-              }
-            } else {
-              doAbortGroup(pl.requestName, idsToAbort)
-              if (subscribersCount > 0) {
-                dispatcher.next({
-                  type: 'ON_ABORT_GROUP',
-                  payload: {
-                    requestName: pl.requestName,
-                    processIds: idsToAbort,
-                    reason: 'ON_FINSH'
-                  },
-                  contextId
-                })
-              }
-            }
-          }
+          doAbortGroup(idsToAbort)
+          clearAbortedProcesses(pl.requestName, idsToAbort)
+          idsToAbort.forEach(deleteResolver)
           startNextProcessInqueue(pl.requestName)
-          clearAbortInfo(pl.requestName)
           break
         }
         case 'ON_ABORT':
           {
             const pl = payload as ActionPayload['ON_ABORT']
-            const { requestName, processId } = pl
-            doAbort(requestName, processId)
-            startNextProcessInqueue(pl.requestName)
             clearAbortInfo(pl.requestName)
+            deleteResolver(pl.processId)
+            startNextProcessInqueue(pl.requestName)
           }
           break
         case 'ON_ABORT_GROUP':
           {
             const pl = payload as ActionPayload['ON_ABORT_GROUP']
-            const { requestName, processIds } = pl
-            doAbortGroup(requestName, processIds)
-            startNextProcessInqueue(pl.requestName)
             clearAbortInfo(pl.requestName)
+            pl.processIds.forEach(deleteResolver)
+            startNextProcessInqueue(pl.requestName)
           }
           break
         case 'ON_CANCEL':
           {
             const pl = payload as ActionPayload['ON_CANCEL']
             const { keepInState } = pl
-
             if (!keepInState) {
               doCancel(pl.requestName, pl.processId)
             }
+            clearAbortInfo(pl.requestName)
             deleteResolver(pl.processId)
             startNextProcessInqueue(pl.requestName)
-            clearAbortInfo(pl.requestName)
           }
           break
         default:
           break
+      }
+
+      if (subscribersCount > 0 && !skipDispatch) {
+        dispatcher.next({ type, payload, contextId })
       }
     }, 0)
   }
@@ -532,7 +462,8 @@ const getHelpers = (store: Store, contextId: string) => {
     getSubscribersCount,
     getDispatcher,
     addAbortInfo,
-    resetRequest
+    resetRequest,
+    doAbortGroup
   }
 }
 

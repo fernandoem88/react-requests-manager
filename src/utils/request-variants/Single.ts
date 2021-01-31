@@ -11,7 +11,7 @@ export default () =>
       params: Params
     ) => Promise<void | false>
   >(request: SingleRequest) {
-    return async function SingleProcessing(
+    return async function SingleProcess(
       this: { contextId: string; requestName: string; store: Store },
       utils: RequestUtilsStart<Params>,
       ...params: Get2ndParams<SingleRequest>
@@ -19,13 +19,13 @@ export default () =>
       const contextId = this.contextId
       const store = this.store
       if (!contextId) {
-        throw new Error('contextId is undefined in function: SingleProcessing')
+        throw new Error('contextId is undefined in function: SingleType')
       }
       if (!store) {
-        throw new Error('store is undefined in function: SingleProcessing')
+        throw new Error('store is undefined in function: SingleType')
       }
 
-      const prom = request(utils, params[0])
+      const prom = request(utils, params[0] as Params)
       // handle cancel
       prom
         .then((result) => {

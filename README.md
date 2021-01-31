@@ -1,6 +1,6 @@
 # react-requests-manager
 
-> have a full control on your  async actions
+> have a full control on your async actions
 
 [![NPM](https://img.shields.io/npm/v/react-requests-manager.svg)](https://www.npmjs.com/package/react-requests-manager) [![JavaScript Style Guide](https://img.shields.io/badge/code_style-standard-brightgreen.svg)](https://standardjs.com)
 
@@ -15,7 +15,7 @@ npm install --save react-requests-manager
 ```tsx
 import React, { Component } from 'react'
 
-import MyComponent from 'react-requests-manager'
+import {} from 'react-requests-manager'
 import 'react-requests-manager/dist/index.css'
 
 class Example extends Component {

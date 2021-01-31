@@ -58,7 +58,7 @@ const createRequests = () => <
         const requestInfo: RequestInfo<any> = {
           id: uniqid('RequestId__'),
           totalCreated: 0,
-          type: 'SingleProcessing',
+          type: 'SingleType',
           isProcessing: false,
           name: name as string,
           contextId,
@@ -90,7 +90,8 @@ const createRequests = () => <
        */
       const reqName = requestName as string
       const abortPrevious: RequestUtilsStart<any>['abortPrevious'] = (
-        selector
+        selector,
+        options
       ) => {
         const {
           processes: {
@@ -98,6 +99,8 @@ const createRequests = () => <
             ids: [...ids]
           }
         } = helpers.getRequestInfo(requestName as string)
+
+        const keepInState = options?.keepInStateOnAbort
 
         const filteredIds = ids.filter((id) => id !== processId)
         const processIdsToAbort = !selector
@@ -110,19 +113,21 @@ const createRequests = () => <
             const payload = {
               requestName: reqName,
               processId: processIdsToAbort[0],
+              keepInState,
               reason: 'previous'
             }
-            const proceed = stateReducer.ON_ABORT(payload)
-            if (!proceed) return
+            const shouldDispatch = stateReducer.ON_ABORT(payload)
+            if (!shouldDispatch) return
             helpers.dispatchToHooks({ type: 'ON_ABORT', payload })
           } else {
             const payload = {
               requestName: reqName,
               processIds: processIdsToAbort,
+              keepInState,
               reason: 'previous'
             }
-            const proceed = stateReducer.ON_ABORT_GROUP(payload)
-            if (!proceed) return
+            const shouldDispatch = stateReducer.ON_ABORT_GROUP(payload)
+            if (!shouldDispatch) return
             helpers.dispatchToHooks({ type: 'ON_ABORT_GROUP', payload })
           }
         }
@@ -131,14 +136,13 @@ const createRequests = () => <
       const start: RequestUtilsStart<any>['start'] = (onStart) => {
         const payload = { requestName: reqName, processId }
 
-        const proceed = stateReducer.ON_START(payload)
-        if (proceed) {
+        const shouldDispatch = stateReducer.ON_START(payload)
+        if (shouldDispatch) {
           if (onStart) {
             onStart()
           }
           helpers.dispatchToHooks({ type: 'ON_START', payload })
         }
-        // return processId
       }
       /**
        *
@@ -158,34 +162,26 @@ const createRequests = () => <
         if (!isCancellableStatus(status)) {
           return
         }
-        const keepInState = !!(options && options.keepInStateOnCancel)
+        helpers.doAbortGroup([processId])
+        const keepInState = !!options?.keepInStateOnCancel
         const payload = { requestName: reqName, processId, keepInState }
 
-        const proceed = stateReducer.ON_CANCEL(payload)
-        if (!proceed) return
+        const shouldDispatch = stateReducer.ON_CANCEL(payload)
+        if (!shouldDispatch) return
         const skipDispatch = !keepInState || !!this.skipDispatch
 
         helpers.dispatchToHooks({ type: 'ON_CANCEL', payload }, skipDispatch)
         throw new Error('ON_CANCEL')
       }
 
-      const onAbort: RequestUtilsStart<any>['onAbort'] = (
-        callback
-        // options
-      ) => {
+      const onAbort: RequestUtilsStart<any>['onAbort'] = (callback) => {
         helpers.addAbortInfo(processId, callback)
-        // if (options?.keepInStateOnAbort) {
-        //   helpers.modifyRequestInfo(requestName as string, (draft) => {
-        //     // draft.persistableProcessesOnAbort.push(processId);
-        //     draft.processes.byId[processId].keepInStateOnAbort = true
-        //   })
-        // }
       }
 
       const clearError: RequestUtilsStart<any>['clearError'] = () => {
         const payload = { requestName: requestName as string }
-        const proceed = stateReducer.ON_CLEAR(payload)
-        if (!proceed) return
+        const shouldDispatch = stateReducer.ON_CLEAR(payload)
+        if (!shouldDispatch) return
         helpers.dispatchToHooks({ type: 'ON_CLEAR', payload })
       }
       const finish: RequestUtilsStart<any>['finish'] = (
@@ -201,8 +197,8 @@ const createRequests = () => <
           processId,
           ...finishData
         }
-        const proceed = stateReducer.ON_FINISH(payload)
-        if (!proceed) return
+        const shouldDispatch = stateReducer.ON_FINISH(payload)
+        if (!shouldDispatch) return
         if (onFinish) {
           onFinish()
         }
@@ -325,8 +321,8 @@ const createRequests = () => <
       type AU = ActionUtils<any>
       const resetRequest: AU['resetRequest'] = (requestName: any) => {
         const payload = { requestName }
-        const proceed = stateReducer.ON_RESET_REQUEST(payload)
-        if (!proceed) return
+        const shouldDispatch = stateReducer.ON_RESET_REQUEST(payload)
+        if (!shouldDispatch) return
         helpers.dispatchToHooks({ type: 'ON_RESET_REQUEST', payload })
       }
       const getRequestState = (reqName: any) => helpers.getRequestState(reqName)
@@ -350,42 +346,33 @@ const createRequests = () => <
 
           if (ids.length) {
             const payload = { requestNames: ids }
-            const proceed = stateReducer.ON_CLEAR_GROUP(payload)
-            if (!proceed) return
+            const shouldDispatch = stateReducer.ON_CLEAR_GROUP(payload)
+            if (!shouldDispatch) return
             helpers.dispatchToHooks({ type: 'ON_CLEAR_GROUP', payload })
           }
         } else {
           const payload = { requestName: selector as string }
-          const proceed = stateReducer.ON_CLEAR(payload)
-          if (!proceed) return
+          const shouldDispatch = stateReducer.ON_CLEAR(payload)
+          if (!shouldDispatch) return
           helpers.dispatchToHooks({ type: 'ON_CLEAR', payload })
         }
       }
       const abort: AU['abort'] = (reqName, selector, options) => {
         const { requests } = helpers.getContextInfo()
-        const setKeepInState = (reqIds: string[]) => {
-          if (!reqIds.length) return
-          if (options?.keepInStateOnAbort) {
-            helpers.modifyRequestInfo(reqName as string, (draft) => {
-              const { byId } = draft.processes
-              reqIds.forEach((id) => {
-                if (byId[id]) {
-                  byId[id].keepInStateOnAbort = true
-                }
-              })
-            })
-          }
-        }
+        const keepInState = options?.keepInStateOnAbort
+        const reason = options?.reason
         if (!reqName) {
           // abort all requests
           Object.entries(requests).forEach(([name, req]) => {
             const payload = {
               requestName: name,
-              processIds: req.processes.ids
+              processIds: req.processes.ids,
+              keepInState,
+              reason
             }
-            setKeepInState(req.processes.ids)
-            const proceed = stateReducer.ON_ABORT_GROUP(payload)
-            if (proceed) {
+            helpers.doAbortGroup(req.processes.ids)
+            const shouldDispatch = stateReducer.ON_ABORT_GROUP(payload)
+            if (shouldDispatch) {
               helpers.dispatchToHooks({ type: 'ON_ABORT_GROUP', payload })
             }
           })
@@ -399,13 +386,15 @@ const createRequests = () => <
                 )
             )
             .map(([id]) => id)
-          setKeepInState(ids)
+          helpers.doAbortGroup(ids)
           const payload = {
             requestName: reqName as string,
-            processIds: ids
+            processIds: ids,
+            keepInState,
+            reason
           }
-          const proceed = stateReducer.ON_ABORT_GROUP(payload)
-          if (proceed) {
+          const shouldDispatch = stateReducer.ON_ABORT_GROUP(payload)
+          if (shouldDispatch) {
             helpers.dispatchToHooks({ type: 'ON_ABORT_GROUP', payload })
           }
         }
@@ -435,7 +424,6 @@ const createRequests = () => <
         actionCreator(ACTION_UTILS, params[0])
       }
     }
-    // const { reducers } = reducersConfigs;
     const actions: ActionKey extends undefined
       ? {}
       : {

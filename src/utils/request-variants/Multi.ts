@@ -12,7 +12,7 @@ export default () =>
       params: Params
     ) => Promise<void | false>
   >(request: MultiRequest) {
-    return async function MultiProcessing(
+    return async function MultiProcess(
       this: { contextId: string; requestName: string; store: Store },
       utils: RequestUtilsStart<Params>,
       ...params: Get2ndParams<MultiRequest>
@@ -21,16 +21,16 @@ export default () =>
       const requestName = this.requestName
       const store = this.store
       if (!contextId) {
-        throw new Error('contextId is undefined in function: MultiProcessing')
+        throw new Error('contextId is undefined in function: MultiType')
       }
       if (!store) {
-        throw new Error('store is undefined in function: MultiProcessing')
+        throw new Error('store is undefined in function: MultiType')
       }
       const helpers = getHelpers(store, contextId)
       helpers.modifyRequestInfo(requestName, (draft) => {
-        draft.type = 'MultiProcessing'
+        draft.type = 'MultiType'
       })
-      const prom = request(utils, params[0])
+      const prom = request(utils, params[0] as Params)
       // handle cancel
       prom
         .then((result) => {

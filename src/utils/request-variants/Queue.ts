@@ -6,6 +6,7 @@ import {
   Request
 } from 'types'
 import getHelpers from '../helpers'
+import getReducer from '../reducer'
 
 export default () =>
   function Queue<
@@ -25,9 +26,10 @@ export default () =>
       utils: RequestUtilsStart<Params>,
       store: Store
     ): RequestUtilsQueue<Params> => {
+      const stateReducer = getReducer(store, contextId)
       const helpers = getHelpers(store, contextId)
       helpers.modifyRequestInfo(requestName, (draft) => {
-        draft.type = 'QueueProcessing'
+        draft.type = 'QueueType'
       })
 
       const addToQueue = (
@@ -35,39 +37,33 @@ export default () =>
         processId: string,
         onStart?: () => void
       ) => {
-        const {
-          processes: { byId }
-        } = helpers.modifyRequestInfo(requestName, (draft) => {
-          // set status to suspended to show that it is waiting
-          const {
-            isProcessing,
-            processes: { byId }
-          } = draft
-          if (isProcessing) {
-            byId[processId].status = 'suspended'
-          }
+        const shouldDispatch = stateReducer.ON_SUSPEND({
+          requestName,
+          processId
         })
-        // eslint-ignore-next-line
-        let resolver: any = () => {} // tslint-disable-line
-        const blocker = new Promise<void>((resolve) => {
-          resolver = (onStart: any) => {
+
+        let resolver: any = () => {}
+        const promiseBlocker = new Promise<void>((resolve) => {
+          resolver = () => {
             utils.start(onStart)
             resolve()
             helpers.deleteResolver(processId)
           }
         })
-
-        helpers.addResolver(processId, resolver, onStart)
-        if (byId[processId].status !== 'suspended') {
-          // no other processes in queue, so this one should start immediately
-          resolver(onStart)
-        } else {
+        helpers.addResolver(processId, resolver)
+        if (shouldDispatch) {
           helpers.dispatchToHooks({
             type: 'ON_SUSPEND',
             payload: { requestName, processId }
           })
+        } else {
+          const process = helpers.getProcessInfo(requestName, processId)
+          if (process.status === 'created') {
+            // no other processes in queue, so this one should start immediately
+            resolver()
+          }
         }
-        return blocker
+        return promiseBlocker
       }
 
       const { start, ...commonUtils } = utils
@@ -78,7 +74,7 @@ export default () =>
       return { ...commonUtils, inQueue }
     }
 
-    return async function Queue(
+    return async function QueueProcess(
       this: { contextId: string; requestName: string; store: Store },
       utils: RequestUtilsStart<Params>,
       ...params: Get2ndParams<QueueRequest>
@@ -94,7 +90,7 @@ export default () =>
       }
 
       const asyncQueue = getRequestUtils(contextId, requestName, utils, store)
-      const prom = request(asyncQueue, params[0])
+      const prom = request(asyncQueue, params[0] as Params)
       // handle cancel
       prom
         .then((result) => {
