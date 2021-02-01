@@ -17,11 +17,14 @@ const createRequests = () => <
     (utils: RequestUtilsStart<any>, params: any) => Promise<void | false>
   >,
   ExtraActions extends
-    | Record<any, (utils: ActionUtils<Requests>, params: any) => void>
     | undefined
+    | Record<
+        any,
+        (utils: ActionUtils<Requests>, params: any) => void
+      > = undefined
 >(
   requestsRegister: Requests,
-  extraActions?: ExtraActions
+  extraActions: ExtraActions = undefined as ExtraActions
 ) => {
   const configurator = (store: Store, contextName: string) => {
     type RequestKey = keyof Requests

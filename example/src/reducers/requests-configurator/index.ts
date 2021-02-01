@@ -3,25 +3,21 @@ import * as requests from './requests'
 import { createRequests, createManager } from 'react-requests-manager'
 
 const configurator = createRequests(requests, {
-  reset: (utils, requestName: keyof typeof requests) => {
+  reset(utils, requestName: keyof typeof requests) {
     utils.resetRequest(requestName)
   },
-  clearError: (utils,  keyof typeof requests) => {
+  clearError(utils, requestName: keyof typeof requests) {
     utils.clearErrors(requestName)
   },
-  abort: (utils, params: { requestName: keyof typeof requests; id?: string }) => {
+  abort(utils, params: { requestName: keyof typeof requests; id?: string }) {
     const { requestName, id } = params
     utils.abort(requestName, (pcss) => pcss.id === id)
   },
-  abortAll: (utils) => {
+  abortAll(utils) {
     utils.abort()
   }
 })
 
-export const requestUtils = utils
+export const appRM = createManager('TEST', configurator)
 
-export const {
-  manager: $$,
-  useRequests,
-  getState: getRequests
-} = createManager('TEST', configurator)
+// const appRM2 = createManager('TEST', createRequests(requests))

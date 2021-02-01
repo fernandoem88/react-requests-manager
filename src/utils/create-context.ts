@@ -20,7 +20,9 @@ const createContext = () => <
   type Requests = ReturnType<Configurator> extends { requests: infer R }
     ? R
     : any
-  type Actions = ReturnType<Configurator> extends { actions: infer R } ? R : any
+  type ExtraActions = ReturnType<Configurator> extends { actions: infer R }
+    ? R
+    : any
   type RequestKey = keyof Requests
   type RequestsParams<K extends RequestKey> = Requests[K] extends (
     ...params: infer Params
@@ -206,7 +208,8 @@ const createContext = () => <
   }
 
   return {
-    requests: { ...requests, $$: actions } as Requests & { $$: Actions },
+    requests: requests as Requests,
+    extraActions: actions as ExtraActions,
     // hooks
     useRequests,
     // helpers
