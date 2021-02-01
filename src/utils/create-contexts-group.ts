@@ -14,22 +14,22 @@ const createContextsGroup = () => <
 >(
   configurators: Configurators
 ) => {
-  type Contexts = Configurators
-  type ContextKey = keyof Contexts
-  type Requests<Ctx extends ContextKey> = ReturnType<Contexts[Ctx]> extends {
+  type Group = Configurators
+  type GroupKey = keyof Group
+  type Requests<Ctx extends GroupKey> = ReturnType<Group[Ctx]> extends {
     requests: infer R
   }
     ? R
     : any
 
-  type Actions<Ctx extends ContextKey> = ReturnType<Contexts[Ctx]> extends {
+  type Actions<Ctx extends GroupKey> = ReturnType<Group[Ctx]> extends {
     actions: infer R
   }
     ? R
     : any
-  type RequestKey<Ctx extends ContextKey> = keyof Requests<Ctx>
+  type RequestKey<Ctx extends GroupKey> = keyof Requests<Ctx>
   type RequestsParams<
-    Ctx extends ContextKey,
+    Ctx extends GroupKey,
     K extends RequestKey<Ctx>
   > = Requests<Ctx>[K] extends (...params: infer Params) => any
     ? Params[0]
@@ -37,7 +37,7 @@ const createContextsGroup = () => <
   const store = createStore()
   const dispatcher = new Subject()
 
-  type ContextValue<Ctx extends keyof Contexts> = {
+  type GroupValue<Ctx extends keyof Group> = {
     requests: Requests<Ctx>
     actions: Actions<Ctx>
     getRequestsState: () => {
@@ -45,9 +45,9 @@ const createContextsGroup = () => <
     }
     helpers: ReturnType<typeof getHelpers>
   }
-  const createContext = <Ctx extends ContextKey>(
-    configurator: Configurators[Ctx],
-    contextName: Ctx
+  const createContext = <Gp extends GroupKey>(
+    configurator: Configurators[Gp],
+    contextName: Gp
   ) => {
     const { contextId, requests, actions } = configurator(
       store,
@@ -57,12 +57,12 @@ const createContextsGroup = () => <
     helpers.setContextDispatcher(dispatcher)
     const getRequestsState = () =>
       helpers.getRequests() as {
-        [K in RequestKey<Ctx>]: RequestState<RequestsParams<Ctx, K>>
+        [K in RequestKey<Gp>]: RequestState<RequestsParams<Gp, K>>
       }
 
     return {
-      requests: requests as Requests<Ctx>,
-      actions: actions as Actions<Ctx>,
+      requests: requests as Requests<Gp>,
+      actions: actions as Actions<Gp>,
       getRequestsState,
       helpers
     }
@@ -70,11 +70,11 @@ const createContextsGroup = () => <
 
   const contexts = mapRecord(configurators, (configurator, ctx) => {
     return createContext<typeof ctx>(configurator, ctx)
-  }) as { [Ctx in ContextKey]: ContextValue<Ctx> }
+  }) as { [Ctx in GroupKey]: GroupValue<Ctx> }
 
   type RequestsState = {
-    [Ctx in keyof Contexts]: {
-      [K in RequestKey<Ctx>]: RequestState<RequestsParams<Ctx, K>>
+    [Gp in keyof Group]: {
+      [K in RequestKey<Gp>]: RequestState<RequestsParams<Gp, K>>
     }
   }
   const getAllRequestsStates = () =>
@@ -160,7 +160,7 @@ const createContextsGroup = () => <
       Selector extends (
         state: SMState,
         requests: {
-          [Ctx in ContextKey]: {
+          [Ctx in GroupKey]: {
             [K in RequestKey<Ctx>]: RequestState<RequestsParams<Ctx, K>>
           }
         },
@@ -244,12 +244,12 @@ const createContextsGroup = () => <
 
   return {
     requests: mapRecord(contexts, ({ requests }: any) => ({ ...requests })) as {
-      [Ctx in ContextKey]: Requests<Ctx>
+      [Ctx in GroupKey]: Requests<Ctx>
     },
-    extraActions: mapRecord(contexts, ({ actions }: any) => ({
+    extraActions: mapRecord(contexts, ({ actions = {} }: any) => ({
       ...actions
     })) as {
-      [Ctx in ContextKey]: Actions<Ctx>
+      [Ctx in GroupKey]: Actions<Ctx>
     },
     useRequests,
     getState: getAllRequestsStates,

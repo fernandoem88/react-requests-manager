@@ -19,10 +19,10 @@ const createRequests = () => <
   ExtraActions extends Record<
     any,
     (utils: ActionUtils<Requests>, params: any) => void
-  > = {}
+  >
 >(
   requestsRegister: Requests,
-  extraActions?: ExtraActions
+  extraActions: ExtraActions = {} as ExtraActions
 ) => {
   const configurator = (store: Store, contextName: string) => {
     type RequestKey = keyof Requests
@@ -422,9 +422,11 @@ const createRequests = () => <
         actionCreator(ACTION_UTILS, params[0])
       }
     }
-    const actions: {
-      [K in ExtraActionKey]: (...params: ExtraActionsParams<K>) => void
-    } =
+    const actions: ExtraActionKey extends never
+      ? undefined
+      : {
+          [K in ExtraActionKey]: (...params: ExtraActionsParams<K>) => void
+        } =
       extraActions === undefined
         ? undefined
         : (mapRecord(extraActions as any, (actionCreator) => {
