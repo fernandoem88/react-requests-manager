@@ -421,7 +421,7 @@ const createRequests = () => <
         actionCreator(ACTION_UTILS, params[0])
       }
     }
-    const $$: ExtraActions extends undefined
+    const actions: ExtraActions extends undefined
       ? undefined
       : {
           [K in ExtraActionKey]: (...params: ExtraActionsParams<K>) => void
@@ -433,7 +433,7 @@ const createRequests = () => <
           }) as any)
 
     initializeRequests()
-    return { requests: { ...requests, $$ }, contextId }
+    return { requests, actions, contextId }
   }
   return configurator
 }
