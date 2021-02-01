@@ -3,7 +3,7 @@ import uniqid from 'uniqid'
 
 import { Root, Header } from './styled'
 
-import { $$, useRequests } from '../../reducers/requests-configurator'
+import { $$ } from '../../reducers/requests-configurator'
 import ProcessItem from '../ProcessItem'
 
 interface Props {
@@ -11,7 +11,7 @@ interface Props {
   duration?: number
 }
 const RequestItem: React.FC<Props> = (props) => {
-  const req = useRequests((reqs) => reqs[props.requestName])
+  const req = $$.useRequests((reqs) => reqs[props.requestName])
   const [version, setVersion] = useState('')
   const [ids, setIds] = useState<string[]>([])
   useEffect(() => {

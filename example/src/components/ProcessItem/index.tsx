@@ -4,7 +4,7 @@ import ReactSlider from 'react-slider'
 import * as actions from '../../reducers/requests-configurator/actions'
 
 import { Root } from './styled'
-import { $$, useRequests } from '../../reducers/requests-configurator'
+import { $$ } from '../../reducers/requests-configurator'
 import { getRandomNumber } from '../../configs'
 
 interface Props {

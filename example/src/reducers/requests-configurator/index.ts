@@ -18,6 +18,6 @@ const configurator = createRequests(requests, {
   }
 })
 
-export const appRM = createManager('TEST', configurator)
+export const $$ = createManager('TEST', configurator)
 
-// const appRM2 = createManager('TEST', createRequests(requests))
+const appRM2 = createManager('TEST', createRequests(requests))
