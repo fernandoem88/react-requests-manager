@@ -243,15 +243,13 @@ const createContextsGroup = () => <
   }
 
   return {
-    manager: mapRecord(contexts, ({ requests, actions, getRequestsState }) => ({
-      requests,
-      actions,
-      getRequests: getRequestsState
+    requests: mapRecord(contexts, ({ requests }: any) => ({ ...requests })) as {
+      [Ctx in ContextKey]: Requests<Ctx>
+    },
+    extraActions: mapRecord(contexts, ({ actions }: any) => ({
+      ...actions
     })) as {
-      [Ctx in ContextKey]: {
-        requests: Requests<Ctx>
-        actions: Actions<Ctx>
-      }
+      [Ctx in ContextKey]: Actions<Ctx>
     },
     useRequests,
     getState: getAllRequestsStates,

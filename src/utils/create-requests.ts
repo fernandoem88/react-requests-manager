@@ -16,15 +16,13 @@ const createRequests = () => <
     any,
     (utils: RequestUtilsStart<any>, params: any) => Promise<void | false>
   >,
-  ExtraActions extends
-    | undefined
-    | Record<
-        any,
-        (utils: ActionUtils<Requests>, params: any) => void
-      > = undefined
+  ExtraActions extends Record<
+    any,
+    (utils: ActionUtils<Requests>, params: any) => void
+  > = {}
 >(
   requestsRegister: Requests,
-  extraActions: ExtraActions = undefined as ExtraActions
+  extraActions?: ExtraActions
 ) => {
   const configurator = (store: Store, contextName: string) => {
     type RequestKey = keyof Requests
@@ -424,11 +422,9 @@ const createRequests = () => <
         actionCreator(ACTION_UTILS, params[0])
       }
     }
-    const actions: ExtraActions extends undefined
-      ? undefined
-      : {
-          [K in ExtraActionKey]: (...params: ExtraActionsParams<K>) => void
-        } =
+    const actions: {
+      [K in ExtraActionKey]: (...params: ExtraActionsParams<K>) => void
+    } =
       extraActions === undefined
         ? undefined
         : (mapRecord(extraActions as any, (actionCreator) => {

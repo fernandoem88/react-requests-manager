@@ -28,7 +28,7 @@ const RequestItem: React.FC<Props> = (props) => {
           {req.isProcessing ? (
             ' is processing'
           ) : (
-            <div onClick={() => $$.actions.reset(props.requestName)}>
+            <div onClick={() => $$.extraActions.reset(props.requestName)}>
               {' '}
               Reset
             </div>

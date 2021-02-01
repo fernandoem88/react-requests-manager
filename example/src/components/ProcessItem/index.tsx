@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import ReactSlider from 'react-slider'
 
-import * as actions from '../../reducers/requests-configurator/actions'
-
 import { Root } from './styled'
 import { $$ } from '../../reducers/requests-configurator'
 import { getRandomNumber } from '../../configs'
@@ -20,7 +18,7 @@ const RequestItem: React.FC<Props> = React.memo((props) => {
   const [value, setValue] = useState(0)
   const [timer, setTimer] = useState(duration)
 
-  const process = useRequests((reqs) => {
+  const process = $$.useRequests((reqs) => {
     const { details } = reqs[requestName]
     return details.processes.find((pcss) => pcss.id === processId)
   })
@@ -96,7 +94,7 @@ const RequestItem: React.FC<Props> = React.memo((props) => {
 
   const handleAbort = () => {
     if (process) {
-      actions.abort({
+      $$.extraActions.abort({
         requestName: process.requestName as any,
         id: process.id
       })

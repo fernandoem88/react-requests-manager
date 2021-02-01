@@ -1,5 +1,4 @@
 import * as requests from './requests'
-// import * as actions from './actions'
 import { createRequests, createManager } from 'react-requests-manager'
 
 const configurator = createRequests(requests, {
@@ -19,5 +18,3 @@ const configurator = createRequests(requests, {
 })
 
 export const $$ = createManager('TEST', configurator)
-
-const appRM2 = createManager('TEST', createRequests(requests))

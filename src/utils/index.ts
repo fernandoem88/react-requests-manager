@@ -1,7 +1,7 @@
 import getSingle from './request-variants/Single'
 import getMulti from './request-variants/Multi'
 import getQueue from './request-variants/Queue'
-import getCreateRequests from './create-requests2'
+import getCreateRequests from './create-requests'
 import getCreateContext from './create-context'
 import getCreateContextsGroup from './create-contexts-group'
 
