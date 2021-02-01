@@ -3,7 +3,7 @@ import uniqid from 'uniqid'
 
 import { Root, Header } from './styled'
 
-import { $$, useRequests } from '../../reducers/requests'
+import { $$, useRequests } from '../../reducers/requests-configurator'
 import ProcessItem from '../ProcessItem'
 
 interface Props {

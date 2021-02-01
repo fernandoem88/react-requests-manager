@@ -15,17 +15,14 @@ const createRequests = () => <
   Requests extends Record<
     any,
     (utils: RequestUtilsStart<any>, params: any) => Promise<void | false>
-  >
-  // Actions extends Record<
-  //   any,
-  //   (utils: ActionUtils<Requests>, params: any) => void
-  // >
+  >,
+  ExtraActions extends
+    | Record<any, (utils: ActionUtils<Requests>, params: any) => void>
+    | undefined
 >(
-  requestsRegister: Requests
-  // requestsConfigs: { requests: Requests },
-  // actionsConfigs?: { actions: Actions }
+  requestsRegister: Requests,
+  extraActions?: ExtraActions
 ) => {
-  let requestsUtils: ActionUtils<Requests> = {} as any
   const configurator = (store: Store, contextName: string) => {
     type RequestKey = keyof Requests
     type RequestsParams<K extends RequestKey> = Requests[K] extends (
@@ -35,13 +32,12 @@ const createRequests = () => <
       ? Params
       : []
 
-    // type ActionKey = keyof Actions
-    // type ActionsParams<K extends ActionKey> = Actions[K] extends (
-    //   utils: any,
-    //   ...args: infer Params
-    // ) => any
-    //   ? Params
-    //   : []
+    type ExtraActionKey = keyof ExtraActions
+    type ExtraActionsParams<
+      K extends ExtraActionKey
+    > = ExtraActions[K] extends (utils: any, ...args: infer Params) => any
+      ? Params
+      : []
 
     const contextId = uniqid('ContextId__')
     const helpers = getHelpers(store, contextId)
@@ -72,8 +68,6 @@ const createRequests = () => <
       }
       helpers.setContextRequests(requestsInfo)
     }
-
-    // initializeRequests();
 
     // ****** REQUEST UTILS ********
 
@@ -410,37 +404,38 @@ const createRequests = () => <
       }
     }
     const ACTION_UTILS: ActionUtils<Requests> = getActionUtils()
-    requestsUtils = ACTION_UTILS
-    // /**
-    //  * @description create actions
-    //  * @param actionCreator
-    //  */
-    // const createAction = <
-    //   ActionCreator extends (utils: ActionUtils<Requests>, params: any) => void
-    // >(
-    //   actionCreator: ActionCreator
-    // ) => {
-    //   type AParams = ActionCreator extends (u: any, ...params: infer P) => any
-    //     ? P
-    //     : []
-    //   return (...params: AParams) => {
-    //     actionCreator(ACTION_UTILS, params[0])
-    //   }
-    // }
-    // const actions: ActionKey extends undefined
-    //   ? {}
-    //   : {
-    //       [K in ActionKey]: (...params: ActionsParams<K>) => void
-    //     } = !actionsConfigs
-    //   ? {}
-    //   : (mapRecord(actionsConfigs.actions, (actionCreator) => {
-    //       return createAction(actionCreator)
-    //     }) as any)
+
+    /**
+     * @description create actions
+     * @param actionCreator
+     */
+    const createAction = <
+      ActionCreator extends (utils: ActionUtils<Requests>, params: any) => void
+    >(
+      actionCreator: ActionCreator
+    ) => {
+      type AParams = ActionCreator extends (u: any, ...params: infer P) => any
+        ? P
+        : []
+      return (...params: AParams) => {
+        actionCreator(ACTION_UTILS, params[0])
+      }
+    }
+    const $$: ExtraActions extends undefined
+      ? undefined
+      : {
+          [K in ExtraActionKey]: (...params: ExtraActionsParams<K>) => void
+        } =
+      extraActions === undefined
+        ? undefined
+        : (mapRecord(extraActions as any, (actionCreator) => {
+            return createAction(actionCreator)
+          }) as any)
 
     initializeRequests()
-    return { requests, contextId }
+    return { requests: { ...requests, $$ }, contextId }
   }
-  return { configurator, utils: requestsUtils }
+  return configurator
 }
 
 export default createRequests

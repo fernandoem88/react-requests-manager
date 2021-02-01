@@ -15,7 +15,7 @@ const createContext = () => <
   configurator: Configurator
 ) => {
   const store = createStore()
-  const { contextId, requests, actions } = configurator(store, name)
+  const { contextId, requests } = configurator(store, name)
 
   type Requests = ReturnType<Configurator> extends { requests: infer R }
     ? R
@@ -206,10 +206,7 @@ const createContext = () => <
   }
 
   return {
-    manager: {
-      requests: requests as Requests,
-      actions: actions as Actions
-    },
+    requests: requests as Requests,
     // hooks
     useRequests,
     // helpers

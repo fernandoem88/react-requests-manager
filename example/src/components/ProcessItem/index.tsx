@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import ReactSlider from 'react-slider'
 
+import * as actions from '../../reducers/requests-configurator/actions'
+
 import { Root } from './styled'
 import { $$, useRequests } from '../../reducers/requests-configurator'
 import { getRandomNumber } from '../../configs'
@@ -94,7 +96,7 @@ const RequestItem: React.FC<Props> = React.memo((props) => {
 
   const handleAbort = () => {
     if (process) {
-      $$.actions.abort({
+      actions.abort({
         requestName: process.requestName as any,
         id: process.id
       })
