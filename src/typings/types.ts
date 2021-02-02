@@ -286,7 +286,7 @@ declare module 'types' {
     ) => void
     onAbort: (
       callback: OnAbortCallback,
-      options?: { catchError: undefined }
+      options?: { catchError: boolean }
     ) => void
   }
 
