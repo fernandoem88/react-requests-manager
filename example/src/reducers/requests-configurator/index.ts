@@ -10,9 +10,9 @@ const configurator = createRequests(requests, {
   },
   abort(utils, params: { requestName: keyof typeof requests; id?: string }) {
     const { requestName, id } = params
-    utils.abort(requestName, (pcss) => pcss.id === id)
+    utils.abort(requestName, !id ? undefined : (pcss) => pcss.id === id)
   },
-  abortAll(utils) {
+  abortAllRequests(utils) {
     utils.abort()
   }
 })

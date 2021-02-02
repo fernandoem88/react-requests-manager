@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import uniqid from 'uniqid'
 
-import { Root, Header } from './styled'
+import { Root, Header, Title, Status, ActionWrapper } from './styled'
 
 import { $$ } from '../../reducers/requests-configurator'
 import ProcessItem from '../ProcessItem'
@@ -11,9 +11,28 @@ interface Props {
   duration?: number
 }
 const RequestItem: React.FC<Props> = (props) => {
+  const { requestName } = props
   const req = $$.useRequests((reqs) => reqs[props.requestName])
   const [version, setVersion] = useState('')
   const [ids, setIds] = useState<string[]>([])
+
+  const canReset = !req.isProcessing && req.details.count.total > 0
+
+  const handleAbort = () => {
+    req.isProcessing && $$.extraActions.abort({ requestName })
+  }
+  const handleReset = () => canReset && $$.extraActions.reset(requestName)
+
+  const handleClick = () => {
+    handleAbort()
+    handleReset()
+  }
+
+  const actionBtnLabel = req.isProcessing
+    ? 'abort all'
+    : canReset
+    ? 'reset'
+    : ''
   useEffect(() => {
     if (req.isProcessing) {
       setVersion(uniqid())
@@ -23,17 +42,13 @@ const RequestItem: React.FC<Props> = (props) => {
   return (
     <Root>
       <Header>
-        <div>{props.requestName}</div>
-        <div>
-          {req.isProcessing ? (
-            ' is processing'
-          ) : (
-            <div onClick={() => $$.extraActions.reset(props.requestName)}>
-              {' '}
-              Reset
-            </div>
+        <Title>{requestName}</Title>
+        {req.isProcessing && <Status>is processing</Status>}
+        <ActionWrapper>
+          {(req.isProcessing || canReset) && (
+            <div onClick={handleClick}>{actionBtnLabel}</div>
           )}
-        </div>
+        </ActionWrapper>
       </Header>
       <div>
         {ids.map((id, index) => (

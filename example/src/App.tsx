@@ -5,7 +5,7 @@ import RequestItem from './components/RequestItem'
 
 const App = React.memo(() => {
   return (
-    <div>
+    <div style={{ width: '100%', maxWidth: 580, margin: 'auto' }}>
       <RequestItem requestName={'queueRequest'} />
     </div>
   )

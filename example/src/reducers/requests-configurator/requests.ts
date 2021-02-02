@@ -14,6 +14,7 @@ export const singleRequest = Single(async (utils, params: Params) => {
   })
   const { abort, execute } = api.testRequest(params.delay)
   utils.onAbort(() => {
+    console.log('aborted process', params.index)
     abort()
   })
 
@@ -36,6 +37,7 @@ export const multiRequest = Multi(async (utils, params: Params) => {
   })
   const { abort, execute } = api.testRequest(params.delay)
   utils.onAbort(() => {
+    console.log('aborted process', params.index)
     abort()
   })
 
@@ -58,6 +60,7 @@ export const queueRequest = Queue(async (utils, params: Params) => {
   })
   const { abort, execute } = api.testRequest(params.delay)
   utils.onAbort(async () => {
+    console.log('aborted process', params.index)
     abort()
   })
   try {

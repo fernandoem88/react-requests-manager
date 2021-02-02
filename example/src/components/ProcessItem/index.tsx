@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import ReactSlider from 'react-slider'
 
-import { Root } from './styled'
+import { Root, SliderWrapper, ThumbLabel } from './styled'
 import { $$ } from '../../reducers/requests-configurator'
 import { getRandomNumber } from '../../configs'
 
@@ -16,7 +16,6 @@ const RequestItem: React.FC<Props> = React.memo((props) => {
   const [duration] = useState(() => props.duration || getRandomNumber(4) + 1)
   const [processId, setProcessId] = useState<string>()
   const [value, setValue] = useState(0)
-  const [timer, setTimer] = useState(duration)
 
   const process = $$.useRequests((reqs) => {
     const { details } = reqs[requestName]
@@ -28,31 +27,13 @@ const RequestItem: React.FC<Props> = React.memo((props) => {
     process?.status === 'success' || process?.status === 'error'
   )
   const isSuspended = !!(process?.status === 'suspended')
-  const isAborted = !!(process?.status === 'aborted')
+  const canAbort = isProcessing || isSuspended
+  const canStart = !process
   useEffect(() => {
     if (isEnded) {
       setValue(100)
-      setTimer(0)
     }
   }, [isEnded])
-  useEffect(() => {
-    if (!isProcessing) return
-    let d = duration
-    const ti = setInterval(() => {
-      setTimer((t) => {
-        const newT = t - 1
-        d = newT
-        if (newT < 0) {
-          return 0
-        }
-        return newT
-      })
-      if (d <= 0) {
-        clearInterval(ti)
-      }
-    }, 1000)
-    return () => clearInterval(ti)
-  }, [duration, isProcessing])
 
   useEffect(() => {
     let d = 0
@@ -76,7 +57,6 @@ const RequestItem: React.FC<Props> = React.memo((props) => {
   useEffect(() => {
     if (!process) {
       setProcessId(undefined)
-      setTimer(duration)
     }
   }, [process, duration])
 
@@ -87,7 +67,6 @@ const RequestItem: React.FC<Props> = React.memo((props) => {
       delay: duration,
       index: props.index
     })
-    setTimer(duration)
     setValue(0)
     !!pcssId && setProcessId(pcssId)
   }
@@ -102,7 +81,7 @@ const RequestItem: React.FC<Props> = React.memo((props) => {
   }
   return (
     <Root status={processingStatus}>
-      <div>
+      <SliderWrapper>
         <ReactSlider
           className='request-slider'
           thumbClassName='request-thumb'
@@ -113,24 +92,35 @@ const RequestItem: React.FC<Props> = React.memo((props) => {
           renderThumb={(thumbProps, state) => {
             if (thumbProps.key === 'request-thumb-1')
               return <div {...thumbProps} />
+
+            let label = `${duration} second${duration > 1 ? 's' : ''}`
+            if (process) {
+              const { index, status } = process
+              label = `process #${index}: ${status || ''} ${state.valueNow}%`
+            }
+
             return (
-              <div {...thumbProps}>
-                {isEnded || isAborted || isSuspended
-                  ? `${process?.status || ''} ${state.valueNow}% `
-                  : ''}
-              </div>
+              <React.Fragment key={props.index}>
+                <div {...thumbProps} key={'thumb'}></div>
+                <ThumbLabel key={'label'} status={processingStatus}>
+                  {label}
+                </ThumbLabel>
+              </React.Fragment>
             )
           }}
           pearling
           minDistance={0}
         />
-        {timer}
-      </div>
-      <div>
-        <div onClick={isProcessing || isSuspended ? handleAbort : handleStart}>
-          {isProcessing || isSuspended ? 'abort' : 'start'}
+      </SliderWrapper>
+      {(canAbort || canStart) && (
+        <div>
+          {
+            <div onClick={canAbort ? handleAbort : handleStart}>
+              {canAbort ? 'abort' : 'start'}
+            </div>
+          }
         </div>
-      </div>
+      )}
     </Root>
   )
 })
