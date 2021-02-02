@@ -338,20 +338,39 @@ const getHelpers = (store: Store, contextId: string) => {
     })
   }
 
-  const startNextProcessInqueue = (reqName: string) => {
+  const clearCancelledProcesses = (
+    requestName: string,
+    processIds: string[]
+  ) => {
+    const set = new Set(processIds)
+    processIds.forEach(deleteAbortInfo)
+    modifyRequestInfo(requestName, (draft) => {
+      const { ids, byId } = draft.processes
+      draft.processes.ids = ids.filter((id) => {
+        const { keepInStateOnCancel, status } = byId[id]
+        const keepInState = keepInStateOnCancel
+        const shouldDelete =
+          status === 'cancelled' && !keepInState && set.has(id)
+        if (shouldDelete) {
+          delete byId[id]
+        }
+        return !shouldDelete
+      })
+    })
+  }
+
+  const startNextSuspendedProcessInqueue = (reqName: string) => {
     const req = getRequestInfo(reqName)
     if (req.type !== 'QueueType') return
     const { byId, ids } = req.processes
-    const [processingId] = ids.filter(
+    const isProcessing = ids.some(
       (reqId) => byId[reqId].status === 'processing'
     )
-    if (processingId) return
-    const [suspendedId] = ids.filter(
-      (reqId) => byId[reqId].status === 'suspended'
-    )
+    if (isProcessing) return
+    const suspendedId = ids.find((reqId) => byId[reqId].status === 'suspended')
     if (suspendedId) {
       const { resolver } = getResolver(suspendedId)
-      resolver()
+      resolver && resolver()
     }
   }
 
@@ -390,25 +409,25 @@ const getHelpers = (store: Store, contextId: string) => {
           clearAbortedProcesses(pl.requestName, idsToAbort)
           deleteAllAbortInfo(pl.requestName)
           deleteAllResolvers(pl.requestName)
-          startNextProcessInqueue(pl.requestName)
+          // startNextSuspendedProcessInqueue(pl.requestName)
           break
         }
         case 'ON_ABORT':
           {
             const pl = payload as ActionPayload['ON_ABORT']
             clearAbortedProcesses(pl.requestName, [pl.processId])
-            deleteAllAbortInfo(pl.requestName) // initial state of abort info
+            deleteAbortInfo(pl.processId) // initial state of abort info
             deleteResolver(pl.processId)
-            startNextProcessInqueue(pl.requestName)
+            startNextSuspendedProcessInqueue(pl.requestName)
           }
           break
         case 'ON_ABORT_GROUP':
           {
             const pl = payload as ActionPayload['ON_ABORT_GROUP']
             clearAbortedProcesses(pl.requestName, pl.processIds)
-            deleteAllAbortInfo(pl.requestName)
             pl.processIds.forEach(deleteResolver)
-            startNextProcessInqueue(pl.requestName)
+            pl.processIds.forEach(deleteAbortInfo)
+            startNextSuspendedProcessInqueue(pl.requestName)
           }
           break
         case 'ON_CANCEL':
@@ -418,10 +437,10 @@ const getHelpers = (store: Store, contextId: string) => {
             if (!keepInState) {
               doCancel(pl.requestName, pl.processId)
             }
-            // clearCancelledProcess(pl.processId)
-            deleteAllAbortInfo(pl.requestName)
+            clearCancelledProcesses(pl.requestName, [pl.processId])
+            deleteAbortInfo(pl.processId)
             deleteResolver(pl.processId)
-            startNextProcessInqueue(pl.requestName)
+            startNextSuspendedProcessInqueue(pl.requestName)
           }
           break
         default:
