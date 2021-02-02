@@ -21,9 +21,12 @@ declare module 'types' {
       : Params
     : []
 
-  export type Request<Params extends [any] | []> = (
-    utils: RequestUtilsStart<Params[0]>,
-    ...params: Params
+  export type RequestWithNoParams = (
+    utils: RequestUtils<undefined>
+  ) => Promise<void | false>
+  export type Request<Params> = (
+    utils: RequestUtils<Params>,
+    ...params: [Params]
   ) => Promise<void | false>
   export class Subject<T = any> {
     constructor()
@@ -251,7 +254,7 @@ declare module 'types' {
       options?: { keepInStateOnAbort: boolean; reason?: any }
     ) => void
   }
-  export interface RequestUtils<Params = any> {
+  export interface RequestUtilsCommon<Params = any> {
     getProcessState: () => ProcessState<Params>
     getRequestState: () => RequestState<Params>
     // getContextState: () => ContextState<State>;
@@ -286,17 +289,17 @@ declare module 'types' {
     ) => void
     onAbort: (
       callback: OnAbortCallback,
-      options?: { catchError: boolean }
+      options?: { catchError?: boolean }
     ) => void
   }
 
-  export interface RequestUtilsStart<Params = any>
-    extends RequestUtils<Params> {
+  export interface RequestUtils<Params = any>
+    extends RequestUtilsCommon<Params> {
     start: (onStart?: OnStart) => void
   }
 
   export interface RequestUtilsQueue<Params = any>
-    extends RequestUtils<Params> {
+    extends RequestUtilsCommon<Params> {
     inQueue: (onStart?: OnStart) => Promise<void>
   }
 
@@ -363,7 +366,7 @@ declare module 'state-manager-store' {
   export interface StateManagerStore<State = any> {
     // dispatch: (action: A) => void
     getState: () => State
-    subscribe: (listener: () => void) => { unsubscribe: any }
+    subscribe: (listener: () => void) => { unsubscribe: Function }
   }
 }
 

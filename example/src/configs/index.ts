@@ -28,7 +28,7 @@ const configureFakeRequest = (
         }, delay * 1000)
         innerAbort = () => {
           clearTimeout(to)
-          reject(new Error('abort() => request promise cancelled'))
+          reject(new Error('Request aborted'))
         }
       })
 

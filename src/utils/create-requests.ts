@@ -4,7 +4,7 @@ import {
   ProcessInfo,
   ActionUtils,
   RequestInfo,
-  RequestUtilsStart,
+  RequestUtils,
   RequestState,
   ContextInfo
 } from 'types'
@@ -14,7 +14,7 @@ import getReducer from './reducer'
 const createRequests = () => <
   Requests extends Record<
     any,
-    (utils: RequestUtilsStart<any>, params: any) => Promise<void | false>
+    (utils: RequestUtils<any>, params: any) => Promise<void | false>
   >,
   ExtraActions extends Record<
     any,
@@ -75,7 +75,7 @@ const createRequests = () => <
     const getRequestUtils = (
       requestName: RequestKey,
       processId: string
-    ): RequestUtilsStart<RequestsParams<typeof requestName>> => {
+    ): RequestUtils<RequestsParams<typeof requestName>> => {
       const getRequestState = (): RequestState<
         RequestsParams<typeof requestName>
       > => {
@@ -86,7 +86,7 @@ const createRequests = () => <
        * @param selector
        */
       const reqName = requestName as string
-      const abortPrevious: RequestUtilsStart<any>['abortPrevious'] = (
+      const abortPrevious: RequestUtils<any>['abortPrevious'] = (
         selector,
         options
       ) => {
@@ -130,7 +130,7 @@ const createRequests = () => <
         }
       }
 
-      const start: RequestUtilsStart<any>['start'] = (onStart) => {
+      const start: RequestUtils<any>['start'] = (onStart) => {
         const payload = { requestName: reqName, processId }
 
         const shouldDispatch = stateReducer.ON_START(payload)
@@ -147,7 +147,7 @@ const createRequests = () => <
        * @param options
        * @description cancel this request based on all processes state
        */
-      const cancel: RequestUtilsStart<any>['cancel'] = function (
+      const cancel: RequestUtils<any>['cancel'] = function (
         this: { skipDispatch?: boolean },
         options
       ) {
@@ -171,10 +171,7 @@ const createRequests = () => <
         throw new Error('ON_CANCEL')
       }
 
-      const onAbort: RequestUtilsStart<any>['onAbort'] = (
-        callback,
-        options = { catchError: undefined }
-      ) => {
+      const onAbort: RequestUtils<any>['onAbort'] = (callback, options) => {
         if (options?.catchError) {
           helpers.modifyRequestInfo(reqName, (draft) => {
             const { byId } = draft.processes
@@ -186,16 +183,13 @@ const createRequests = () => <
         helpers.addAbortInfo(processId, { callback })
       }
 
-      const clearError: RequestUtilsStart<any>['clearError'] = () => {
+      const clearError: RequestUtils<any>['clearError'] = () => {
         const payload = { requestName: requestName as string }
         const shouldDispatch = stateReducer.ON_CLEAR(payload)
         if (!shouldDispatch) return
         helpers.dispatchToHooks({ type: 'ON_CLEAR', payload })
       }
-      const finish: RequestUtilsStart<any>['finish'] = (
-        statusData,
-        onFinish
-      ) => {
+      const finish: RequestUtils<any>['finish'] = (statusData, onFinish) => {
         const req = helpers.getRequestInfo(requestName as string)
         const finishData =
           typeof statusData === 'string' ? { status: statusData } : statusData
@@ -270,7 +264,7 @@ const createRequests = () => <
 
     const createRequest = <
       RequestCreator extends (
-        utils: RequestUtilsStart<any>,
+        utils: RequestUtils<any>,
         params: any
       ) => Promise<void | false>
     >(
@@ -281,7 +275,7 @@ const createRequests = () => <
         // for each call, we create a new process
         const process = createProcess(requestName, params)
         addProcess(requestName, process)
-        const requestUtils: RequestUtilsStart<any> = getRequestUtils(
+        const requestUtils: RequestUtils<any> = getRequestUtils(
           requestName,
           process.id
         )
@@ -313,7 +307,7 @@ const createRequests = () => <
     const handleRequestErrors = async (
       processId: string,
       promise: Promise<void | false>,
-      cancel: RequestUtilsStart<any>['cancel']
+      cancel: RequestUtils<any>['cancel']
     ) => {
       if (!processId) return
       if (!promise) {

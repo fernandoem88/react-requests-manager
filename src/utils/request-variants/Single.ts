@@ -1,19 +1,25 @@
-import { Store, RequestUtilsStart, Get2ndParams, Request } from 'types'
+import {
+  Store,
+  RequestUtils,
+  Get2ndParams,
+  Request,
+  RequestWithNoParams
+} from 'types'
 
 export default () =>
   function Single<
     Params = undefined,
     SingleRequest extends (
-      utils: RequestUtilsStart<Params>,
+      utils: RequestUtils<Params>,
       params: Params
     ) => Promise<void | false> = (
-      utils: RequestUtilsStart<Params>,
+      utils: RequestUtils<Params>,
       params: Params
     ) => Promise<void | false>
   >(request: SingleRequest) {
     return async function SingleProcess(
       this: { contextId: string; requestName: string; store: Store },
-      utils: RequestUtilsStart<Params>,
+      utils: RequestUtils<Params>,
       ...params: Get2ndParams<SingleRequest>
     ) {
       const contextId = this.contextId
@@ -39,5 +45,7 @@ export default () =>
           }
           throw err
         })
-    } as Request<Get2ndParams<SingleRequest>>
+    } as Get2ndParams<SingleRequest> extends []
+      ? RequestWithNoParams
+      : Request<Get2ndParams<SingleRequest>[0]>
   }

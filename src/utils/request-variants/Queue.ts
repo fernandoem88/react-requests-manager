@@ -1,9 +1,10 @@
 import {
   Store,
   RequestUtilsQueue,
-  RequestUtilsStart,
+  RequestUtils,
   Get2ndParams,
-  Request
+  Request,
+  RequestWithNoParams
 } from 'types'
 import getHelpers from '../helpers'
 import getReducer from '../reducer'
@@ -23,7 +24,7 @@ export default () =>
     const getRequestUtils = (
       contextId: string,
       requestName: string,
-      utils: RequestUtilsStart<Params>,
+      utils: RequestUtils<Params>,
       store: Store
     ): RequestUtilsQueue<Params> => {
       const stateReducer = getReducer(store, contextId)
@@ -76,7 +77,7 @@ export default () =>
 
     return async function QueueProcess(
       this: { contextId: string; requestName: string; store: Store },
-      utils: RequestUtilsStart<Params>,
+      utils: RequestUtils<Params>,
       ...params: Get2ndParams<QueueRequest>
     ) {
       const contextId = this.contextId
@@ -104,5 +105,7 @@ export default () =>
           }
           throw err
         })
-    } as Request<Get2ndParams<QueueRequest>>
+    } as Get2ndParams<QueueRequest> extends []
+      ? RequestWithNoParams
+      : Request<Get2ndParams<QueueRequest>[0]>
   }

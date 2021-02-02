@@ -1,20 +1,26 @@
-import { Store, RequestUtilsStart, Get2ndParams, Request } from 'types'
+import {
+  Store,
+  RequestUtils,
+  Get2ndParams,
+  Request,
+  RequestWithNoParams
+} from 'types'
 import getHelpers from '../helpers'
 
 export default () =>
   function Multi<
     Params = undefined,
     MultiRequest extends (
-      utils: RequestUtilsStart<Params>,
+      utils: RequestUtils<Params>,
       params: Params
     ) => Promise<void | false> = (
-      utils: RequestUtilsStart<Params>,
+      utils: RequestUtils<Params>,
       params: Params
     ) => Promise<void | false>
   >(request: MultiRequest) {
     return async function MultiProcess(
       this: { contextId: string; requestName: string; store: Store },
-      utils: RequestUtilsStart<Params>,
+      utils: RequestUtils<Params>,
       ...params: Get2ndParams<MultiRequest>
     ) {
       const contextId = this.contextId
@@ -44,5 +50,7 @@ export default () =>
           }
           throw err
         })
-    } as Request<Get2ndParams<MultiRequest>>
+    } as Get2ndParams<MultiRequest> extends []
+      ? RequestWithNoParams
+      : Request<Get2ndParams<MultiRequest>[0]>
   }
