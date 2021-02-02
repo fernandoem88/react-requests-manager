@@ -1,78 +1,72 @@
 import { Single, Queue, Multi } from 'react-requests-manager'
 import { configsUtils } from '../../configs'
-// import { ActionType } from '.'
+import * as helpers from '../helpers'
+
 const { getConfig } = configsUtils
 const { api } = getConfig()
 type Params = { delay?: number; index: number }
-export const singleRequest = Single(async (utils, params: Params) => {
-  // const t = false as any
-  // if (!t) {
-  //   utils.cancel()
-  // }
-  utils.start(() => {
-    // on start logic
-  })
-  const { abort, execute } = api.testRequest(params.delay)
-  utils.onAbort(() => {
-    console.log('aborted process', params.index)
-    abort()
-  })
 
+export const singleFetch = Single(async (utils, params: Params) => {
+  utils.start(() => {
+    // on start logic: clear request error, dispatch to redux, ...
+  })
+  const { abort, execute } = api.fetchData(params.delay, ['user 1', 'user 2'])
+  utils.onAbort(abort, { catchError: true })
   try {
-    await execute()
+    const result = await execute()
     utils.finish('success', () => {
-      // dispatch({ type: ActionType.ADD_TODO, payload: result })
+      // success logic goes here: dispatch to redux, ...
+      helpers.dispatchSuccess(utils, result)
     })
   } catch (error) {
-    utils.finish('error', () => {
-      // error logic goes here
+    helpers.logError(utils, error)
+    utils.finish({ status: 'error', error: error?.message }, () => {
+      // error logic goes here: dispatch to redux, ...
+      helpers.dispatchError(utils)
     })
   }
 })
 
 // tslint-disable-next-line
-export const multiRequest = Multi(async (utils, params: Params) => {
+export const multiFetch = Multi(async (utils, params: Params) => {
   utils.start(() => {
-    // on start logic
+    // on start logic: clear request error, dispatch to redux, ...
   })
-  const { abort, execute } = api.testRequest(params.delay)
-  utils.onAbort(() => {
-    console.log('aborted process', params.index)
-    abort()
-  })
-
+  const { abort, execute } = api.fetchData(params.delay, ['user 1', 'user 2'])
+  utils.onAbort(abort)
   try {
-    await execute()
+    const result = await execute()
     utils.finish('success', () => {
-      // dispatch({ type: ActionType.ADD_TODO, payload: result })
+      // success logic goes here: dispatch to redux, ...
+      helpers.dispatchSuccess(utils, result)
     })
   } catch (error) {
-    utils.finish('error', () => {
-      // error logic goes here
+    helpers.logError(utils, error)
+    utils.finish({ status: 'error', error: error?.message }, () => {
+      // error logic goes here: dispatch to redux, ...
+      helpers.dispatchError(utils)
     })
   }
 })
 
-export const queueRequest = Queue(async (utils, params: Params) => {
+export const queueFetch = Queue(async (utils, params: Params) => {
   await utils.inQueue(() => {
-    // on start logic
+    // on start logic: clear request error, dispatch to redux, ...
     // utils.clearError()
   })
-  const { abort, execute } = api.testRequest(params.delay)
-  utils.onAbort(async () => {
-    console.log('aborted process', params.index)
-    abort()
-  })
+  const { abort, execute } = api.fetchData(params.delay, ['user 1', 'user 2'])
+  utils.onAbort(abort)
   try {
-    await execute()
+    const result = await execute()
     utils.finish('success', () => {
-      // dispatch({ type: ActionType.ADD_TODO, payload: result })
-      console.log('error')
+      // success logic goes here: dispatch to redux, ...
+      helpers.dispatchSuccess(utils, result)
     })
   } catch (error) {
-    utils.finish({ status: 'error', error }, () => {
-      // error logic goes here
-      console.log('error', '500: Server Error')
+    helpers.logError(utils, error)
+    utils.finish({ status: 'error', error: error?.message }, () => {
+      // error logic goes here: dispatch to redux, ...
+      helpers.dispatchError(utils)
     })
   }
 })

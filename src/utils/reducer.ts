@@ -158,13 +158,26 @@ const getReducer = (store: Store, contextId: string) => {
       const requestInfo = helpers.getRequestInfo(requestName as string)
       const process = helpers.getProcessInfo(requestName as string, processId)
       // if someone called abort but did not setup onAbort correctly, OnFinish can still be triggered
-      if (!process || process.status !== 'processing') return false
-      if (!requestInfo.isProcessing) return false
+      if (
+        !requestInfo.isProcessing ||
+        !process ||
+        process.status !== 'processing'
+      ) {
+        if (process.status === 'aborted') {
+          if (process.handleAbortOnErrorCallback) {
+            helpers.modifyRequestInfo(requestName as string, (draft) => {
+              draft.error = error
+            })
+          }
+        }
+        return false
+      }
+
       helpers.modifyRequestInfo(requestName as string, (draft) => {
         const { byId, ids } = draft.processes
-        if (error) {
-          draft.error = error
-        }
+
+        draft.error = error
+
         byId[processId].status = status
 
         byId[processId].metadata = metadata || {}

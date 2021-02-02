@@ -80,6 +80,7 @@ declare module 'types' {
     params: Params
     status: ProcessStatus
     metadata: Dictionary<any>
+    handleAbortOnErrorCallback?: boolean
     keepInStateOnAbort?: boolean
     keepInStateOnCancel?: boolean // keep this process till the hole process will finish
     index: number
@@ -210,7 +211,9 @@ declare module 'types' {
     id: string
     contexts: Dictionary<{
       info: ContextInfo<any>
-      abortInfo: Dictionary<{ callback: () => void }>
+      abortInfo: Dictionary<{
+        callback: () => void
+      }>
       resolvers: Dictionary<{
         resolver: () => void
       }>
@@ -281,7 +284,10 @@ declare module 'types' {
       selector?: (process: ProcessState<Params>, index: number) => boolean,
       options?: { keepInStateOnAbort: boolean }
     ) => void
-    onAbort: (callback: OnAbortCallback) => void
+    onAbort: (
+      callback: OnAbortCallback,
+      options?: { catchError: undefined }
+    ) => void
   }
 
   export interface RequestUtilsStart<Params = any>

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import ReactSlider from 'react-slider'
 
-import { Root, SliderWrapper, ThumbLabel } from './styled'
+import { Root, SliderWrapper, ThumbLabel, Btn } from './styled'
 import { $$ } from '../../reducers/requests-configurator'
 import { getRandomNumber } from '../../configs'
 
@@ -96,7 +96,9 @@ const RequestItem: React.FC<Props> = React.memo((props) => {
             let label = `${duration} second${duration > 1 ? 's' : ''}`
             if (process) {
               const { index, status } = process
-              label = `process #${index}: ${status || ''} ${state.valueNow}%`
+              label = `process #${index + 1}: ${status || ''} ${
+                state.valueNow
+              }%`
             }
 
             return (
@@ -112,15 +114,17 @@ const RequestItem: React.FC<Props> = React.memo((props) => {
           minDistance={0}
         />
       </SliderWrapper>
-      {(canAbort || canStart) && (
-        <div>
-          {
-            <div onClick={canAbort ? handleAbort : handleStart}>
-              {canAbort ? 'abort' : 'start'}
-            </div>
-          }
-        </div>
-      )}
+
+      <div style={{ width: 80 }}>
+        {(canAbort || canStart) && (
+          <Btn
+            onClick={canAbort ? handleAbort : handleStart}
+            isProcessing={canAbort}
+          >
+            {canAbort ? 'abort' : 'start'}
+          </Btn>
+        )}
+      </div>
     </Root>
   )
 })

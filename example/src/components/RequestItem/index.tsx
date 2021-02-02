@@ -1,7 +1,15 @@
 import React, { useState, useEffect } from 'react'
 import uniqid from 'uniqid'
 
-import { Root, Header, Title, Status, ActionWrapper } from './styled'
+import {
+  Root,
+  Header,
+  Title,
+  Status,
+  ActionWrapper,
+  Btn,
+  AddProcess
+} from './styled'
 
 import { $$ } from '../../reducers/requests-configurator'
 import ProcessItem from '../ProcessItem'
@@ -46,7 +54,9 @@ const RequestItem: React.FC<Props> = (props) => {
         {req.isProcessing && <Status>is processing</Status>}
         <ActionWrapper>
           {(req.isProcessing || canReset) && (
-            <div onClick={handleClick}>{actionBtnLabel}</div>
+            <Btn canReset={canReset} onClick={handleClick}>
+              {actionBtnLabel}
+            </Btn>
           )}
         </ActionWrapper>
       </Header>
@@ -61,13 +71,13 @@ const RequestItem: React.FC<Props> = (props) => {
           />
         ))}
       </div>
-      <div
+      <AddProcess
         onClick={() => {
           setIds([...ids, uniqid()])
         }}
       >
         Add process
-      </div>
+      </AddProcess>
     </Root>
   )
 }

@@ -58,3 +58,20 @@ export const ThumbLabel = styled.div.attrs({
     p.status === 'success' || p.status === 'error' ? 'white' : 'black'};
 `
 ThumbLabel.displayName = 'ProcessItemThumbLabel'
+
+export const Btn = styled.div.attrs({
+  'data-tbsc-name': 'ProcessItem--Btn'
+})<{ isProcessing: boolean }>`
+  cursor: pointer;
+  text-transform: capitalize;
+  border-radius: 3px;
+  margin-left: 4px;
+  text-align: center;
+  width: 100%;
+  height: 100%;
+  padding-top: 3px;
+  box-sizing: border-box;
+  background: ${(p) => (p.isProcessing ? 'orange' : 'lightblue')};
+  color: ${(p) => (p.isProcessing ? '#442d04' : '#2a5867')};
+`
+Btn.displayName = 'ProcessItemBtn'

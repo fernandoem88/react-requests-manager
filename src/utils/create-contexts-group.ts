@@ -178,13 +178,15 @@ const createContextsGroup = () => <
           selector(initialCombined.state, initialCombined.requests, params)
         ) as ReturnType<Selector>
       })
+      const paramsRef = useShallowEqualRef(params)
+
       // checkUpdate returns true if the selected value is updated
       const { current: checkUpdate } = useRef(() => {
         const combined = getCombinedState()
         const newSelectedValue = selector(
           combined.state,
           combined.requests,
-          parameter
+          paramsRef.current
         )
         const isEqual = shallowEqual(
           newSelectedValue,
@@ -197,8 +199,6 @@ const createContextsGroup = () => <
       // if shouldCheckUpdateInMainBodyRef.current is true, we will check for update in the body of this hook not in the useEffect
       const shouldCheckUpdateInMainBodyRef = useRef(true)
       // const shouldCheckUpdateInUseEffectRef = useRef(false)
-      const paramsRef = useShallowEqualRef(params)
-      const parameter = paramsRef.current
       if (shouldCheckUpdateInMainBodyRef.current) {
         // shouldCheckUpdateInUseEffectRef.current = false
         checkUpdate()
@@ -211,23 +211,26 @@ const createContextsGroup = () => <
       //   shouldCheckUpdateInUseEffectRef.current = true
       // })
       useEffect(() => {
-        const doUpdate = (shouldUpdate: boolean) => {
+        const doUpdate = () => {
+          const shouldUpdate = checkUpdate()
           if (shouldUpdate) {
             shouldCheckUpdateInMainBodyRef.current = false
             forceUpdate()
           }
         }
-        const subs1 = stateManagerStore.subscribe(() => {
-          doUpdate(checkUpdate())
+        // state manager
+        const smSubscription = stateManagerStore.subscribe(() => {
+          doUpdate()
         })
-        const subs2 = dispatcher.subscribe(() => {
-          doUpdate(checkUpdate())
+        // requests manager
+        const rmSubscription = dispatcher.subscribe(() => {
+          doUpdate()
         })
         return () => {
-          subs1.unsubscribe()
-          subs2.unsubscribe()
+          smSubscription.unsubscribe()
+          rmSubscription.unsubscribe()
         }
-      }, [parameter])
+      }, [])
       return selectedValueRef.current.value
     }
     const createNamedSelectorHook = <Selectors extends Record<any, any>>(

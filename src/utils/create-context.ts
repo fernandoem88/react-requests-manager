@@ -85,9 +85,7 @@ const createContext = () => <
       shouldCheckUpdateInMainBodyRef.current = true
     }
     const forceUpdate = useForceUpdate()
-    // useEffect(() => {
-    //   shouldCheckUpdateInUseEffectRef.current = true
-    // })
+
     useEffect(() => {
       helpers.updateSubscribersCount(1)
       return () => {
@@ -96,7 +94,8 @@ const createContext = () => <
     }, [])
     useEffect(() => {
       const dispatcher = helpers.getDispatcher()
-      const doUpdate = (shouldUpdate: boolean) => {
+      const doUpdate = () => {
+        const shouldUpdate = checkUpdate(paramsRef.current)
         if (shouldUpdate) {
           shouldCheckUpdateInMainBodyRef.current = false
           forceUpdate()
@@ -104,7 +103,7 @@ const createContext = () => <
       }
       const subscription = dispatcher.subscribe((action) => {
         if (action.contextId !== contextId) return
-        doUpdate(checkUpdate(paramsRef.current))
+        doUpdate()
       })
       return () => {
         subscription.unsubscribe()
@@ -141,13 +140,14 @@ const createContext = () => <
           selector(initialCombined.state, initialCombined.requests, params)
         ) as ReturnType<Selector>
       })
+      const paramsRef = useShallowEqualRef(params)
       // checkUpdate returns true if the selected value is updated
       const { current: checkUpdate } = useRef(() => {
         const combined = getCombinedState()
         const newSelectedValue = selector(
           combined.state,
           combined.requests,
-          parameter
+          paramsRef.current
         )
         const isEqual = shallowEqual(
           newSelectedValue,
@@ -160,8 +160,8 @@ const createContext = () => <
       // if shouldCheckUpdateInMainBodyRef.current is true, we will check for update in the body of this hook not in the useEffect
       const shouldCheckUpdateInMainBodyRef = useRef(true)
       // const shouldCheckUpdateInUseEffectRef = useRef(false)
-      const paramsRef = useShallowEqualRef(params)
-      const parameter = paramsRef.current
+
+      // const parameter = paramsRef.current
       if (shouldCheckUpdateInMainBodyRef.current) {
         // shouldCheckUpdateInUseEffectRef.current = false
         checkUpdate()
@@ -175,24 +175,25 @@ const createContext = () => <
       // })
       useEffect(() => {
         const $context = helpers.getDispatcher()
-        const doUpdate = (shouldUpdate: boolean) => {
+        const doUpdate = () => {
+          const shouldUpdate = checkUpdate()
           if (shouldUpdate) {
             shouldCheckUpdateInMainBodyRef.current = false
             forceUpdate()
           }
         }
-        const subs1 = stateManagerStore.subscribe(() => {
-          doUpdate(checkUpdate())
+        const stateManagerSubscription = stateManagerStore.subscribe(() => {
+          doUpdate()
         })
-        const subs2 = $context.subscribe((action) => {
+        const requestsManagerSubscription = $context.subscribe((action) => {
           if (action.contextId !== contextId) return
-          doUpdate(checkUpdate())
+          doUpdate()
         })
         return () => {
-          subs1.unsubscribe()
-          subs2.unsubscribe()
+          stateManagerSubscription.unsubscribe()
+          requestsManagerSubscription.unsubscribe()
         }
-      }, [parameter])
+      }, [])
       return selectedValueRef.current.value
     }
     const createNamedSelectorHook = <Selectors extends Record<any, any>>(

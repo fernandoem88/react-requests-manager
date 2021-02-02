@@ -16,20 +16,26 @@ const configureFakeRequest = (
   type: 'success' | 'error' = getRandomType()
 ) => {
   const createFakeRequest = <V extends any>(resultData?: V) => {
-    let to: any
+    let innerAbort = () => {}
     const execute = () =>
       new Promise<V>((resolve, reject) => {
-        to = setTimeout(() => {
+        const to = setTimeout(() => {
           if (type === 'error') {
-            reject(resultData)
+            reject(new Error('500: Server Error'))
           } else {
             resolve(resultData)
           }
         }, delay * 1000)
+        innerAbort = () => {
+          clearTimeout(to)
+          reject(new Error('abort() => request promise cancelled'))
+        }
       })
 
     return {
-      abort: () => clearTimeout(to),
+      abort: () => {
+        innerAbort()
+      },
       execute
     }
   }
@@ -37,22 +43,9 @@ const configureFakeRequest = (
 }
 
 const api = {
-  // getTodo: (delay: number = 1) => {
-  //   const getTimer = configureFakeRequest(delay)
-  //   const id = uniqid()
-  //   const todo = {
-  //     id,
-  //     rate: 4 // random value
-  //   }
-  //   return getTimer(todo)
-  // },
-  // deleteTodo(delay: number = 1) {
-  //   const fakeRequest = configureFakeRequest(delay)
-  //   return fakeRequest<void>()
-  // },
-  testRequest(delay?: number) {
+  fetchData<Data = undefined>(delay?: number, data?: Data) {
     const fakeRequest = configureFakeRequest(delay)
-    return fakeRequest<void>()
+    return fakeRequest<Data>(data)
   }
 }
 

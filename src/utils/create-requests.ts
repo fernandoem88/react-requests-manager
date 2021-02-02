@@ -19,10 +19,10 @@ const createRequests = () => <
   ExtraActions extends Record<
     any,
     (utils: ActionUtils<Requests>, params: any) => void
-  >
+  > = {}
 >(
   requestsRegister: Requests,
-  extraActions: ExtraActions = {} as ExtraActions
+  extraActions: ExtraActions = {} as any
 ) => {
   const configurator = (store: Store, contextName: string) => {
     type RequestKey = keyof Requests
@@ -33,7 +33,7 @@ const createRequests = () => <
       ? Params
       : []
 
-    type ExtraActionKey = keyof ExtraActions
+    type ExtraActionKey = keyof typeof extraActions
     type ExtraActionsParams<
       K extends ExtraActionKey
     > = ExtraActions[K] extends (utils: any, ...args: infer Params) => any
@@ -171,8 +171,19 @@ const createRequests = () => <
         throw new Error('ON_CANCEL')
       }
 
-      const onAbort: RequestUtilsStart<any>['onAbort'] = (callback) => {
-        helpers.addAbortInfo(processId, callback)
+      const onAbort: RequestUtilsStart<any>['onAbort'] = (
+        callback,
+        options = { catchError: undefined }
+      ) => {
+        if (options?.catchError) {
+          helpers.modifyRequestInfo(reqName, (draft) => {
+            const { byId } = draft.processes
+            if (byId[processId]) {
+              byId[processId].handleAbortOnErrorCallback = true
+            }
+          })
+        }
+        helpers.addAbortInfo(processId, { callback })
       }
 
       const clearError: RequestUtilsStart<any>['clearError'] = () => {
@@ -195,7 +206,22 @@ const createRequests = () => <
           ...finishData
         }
         const shouldDispatch = stateReducer.ON_FINISH(payload)
-        if (!shouldDispatch) return
+        if (!shouldDispatch) {
+          const { handleAbortOnErrorCallback } = helpers.getProcessInfo(
+            reqName,
+            processId
+          )
+          if (handleAbortOnErrorCallback && onFinish) {
+            onFinish() // callable only once
+            helpers.modifyRequestInfo(reqName, (draft) => {
+              const { byId } = draft.processes
+              if (byId[processId]) {
+                byId[processId].handleAbortOnErrorCallback = false
+              }
+            })
+          }
+          return
+        }
         if (onFinish) {
           onFinish()
         }
