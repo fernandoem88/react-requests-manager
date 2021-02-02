@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import ReactSlider from 'react-slider'
 
 import { Root, SliderWrapper, ThumbLabel, Btn } from './styled'
-import { $$ } from '../../reducers/requests-configurator'
+import { $$ } from '../../RequestsManager'
 import { getRandomNumber } from '../../configs'
 
 interface Props {
@@ -19,7 +19,7 @@ const RequestItem: React.FC<Props> = React.memo((props) => {
 
   const process = $$.useRequests((reqs) => {
     const { details } = reqs[requestName]
-    return details.processes.find((pcss) => pcss.id === processId)
+    return (details.processes as any).find((pcss: any) => pcss.id === processId)
   })
 
   const isProcessing = !!(process?.status === 'processing')

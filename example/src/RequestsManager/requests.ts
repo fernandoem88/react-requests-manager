@@ -1,6 +1,6 @@
-import { Single, Queue, Multi, RequestUtils } from 'react-requests-manager'
-import { configsUtils } from '../../configs'
-import * as helpers from '../helpers'
+import { Single, Queue, Multi } from 'react-requests-manager'
+import { configsUtils } from '../configs'
+import * as helpers from '../reducers/helpers'
 
 const { getConfig } = configsUtils
 const { api } = getConfig()
@@ -17,11 +17,34 @@ export const login = Single(async (utils) => {
       // success logic goes here: dispatch to redux, ...
       helpers.dispatchSuccess(utils, result)
     })
+    return
   } catch (error) {
     utils.finish({ status: 'error', error: error?.message }, () => {
       // error logic goes here: dispatch to redux, ...
       helpers.dispatchError(utils, error)
     })
+    return
+  }
+})
+
+export const pagination = Single(async (utils) => {
+  utils.abortPrevious(undefined, { keepInStateOnAbort: true })
+  const { abort, execute } = api.fetchData()
+  utils.onAbort(abort)
+  utils.start()
+  try {
+    const result = await execute()
+    utils.finish('success', () => {
+      // success logic goes here: dispatch to redux, ...
+      helpers.dispatchSuccess(utils, result)
+    })
+    return
+  } catch (error) {
+    utils.finish({ status: 'error', error: error?.message }, () => {
+      // error logic goes here: dispatch to redux, ...
+      helpers.dispatchError(utils, error)
+    })
+    return
   }
 })
 

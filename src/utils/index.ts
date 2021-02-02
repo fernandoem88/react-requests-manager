@@ -11,3 +11,5 @@ export const createGroupManager = getCreateContextsGroup()
 export const Single = getSingle()
 export const Multi = getMulti()
 export const Queue = getQueue()
+
+// const conf = createRequests({ fetch: async () => {} }, { abort() {} })

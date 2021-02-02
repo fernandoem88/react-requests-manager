@@ -18,7 +18,7 @@ declare module 'types' {
   ) => any
     ? Params[0] extends undefined
       ? []
-      : Params
+      : [Params[0]]
     : []
 
   export type RequestWithNoParams = (

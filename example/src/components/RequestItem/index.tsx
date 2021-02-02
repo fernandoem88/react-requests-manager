@@ -11,7 +11,7 @@ import {
   AddProcess
 } from './styled'
 
-import { $$ } from '../../reducers/requests-configurator'
+import { $$ } from '../../RequestsManager'
 import ProcessItem from '../ProcessItem'
 
 interface Props {

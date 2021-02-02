@@ -16,13 +16,12 @@ const createRequests = () => <
     any,
     (utils: RequestUtils<any>, params: any) => Promise<void | false>
   >,
-  ExtraActions extends Record<
-    any,
-    (utils: ActionUtils<Requests>, params: any) => void
-  > = {}
+  ExtraActions extends
+    | []
+    | [Record<any, (utils: ActionUtils<Requests>, params: any) => void>]
 >(
   requestsRegister: Requests,
-  extraActions: ExtraActions = {} as any
+  ...[extraActions]: ExtraActions
 ) => {
   const configurator = (store: Store, contextName: string) => {
     type RequestKey = keyof Requests
@@ -33,7 +32,9 @@ const createRequests = () => <
       ? Params
       : []
 
-    type ExtraActionKey = keyof typeof extraActions
+    type ExtraActionKey = ExtraActions extends []
+      ? keyof {}
+      : keyof ExtraActions[0]
     type ExtraActionsParams<
       K extends ExtraActionKey
     > = ExtraActions[K] extends (utils: any, ...args: infer Params) => any
@@ -290,6 +291,7 @@ const createRequests = () => <
 
         if (status === 'created' || status === 'cancelled') {
           // to show only for dev
+          console.log(status)
           const description =
             status === 'cancelled'
               ? 'was cancelled after being created'
