@@ -12,4 +12,7 @@ export const Single = getSingle()
 export const Multi = getMulti()
 export const Queue = getQueue()
 
-// const conf = createRequests({ fetch: async () => {} }, { abort() {} })
+// const conf = createRequests(
+//   { fetch: async () => {} }
+//   { abort(utils, id: string) {} }
+// )

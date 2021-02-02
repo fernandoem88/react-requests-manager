@@ -8,7 +8,7 @@ const App = React.memo(() => {
     <div
       style={{ width: '100%', maxWidth: 580, margin: 'auto', marginTop: 50 }}
     >
-      <RequestItem requestName={'login'} />
+      <RequestItem requestName={'multiFetch'} />
     </div>
   )
 })

@@ -37,7 +37,7 @@ const createRequests = () => <
       : keyof ExtraActions[0]
     type ExtraActionsParams<
       K extends ExtraActionKey
-    > = ExtraActions[K] extends (utils: any, ...args: infer Params) => any
+    > = ExtraActions[0][K] extends (utils: any, ...args: infer Params) => any
       ? Params
       : []
 
@@ -144,7 +144,7 @@ const createRequests = () => <
       }
       /**
        *
-       * @param shouldCancel
+      
        * @param options
        * @description cancel this request based on all processes state
        */
@@ -287,11 +287,11 @@ const createRequests = () => <
         }) as typeof requestCreator
         const promise = __requestCreator__(requestUtils, params)
         handleRequestErrors(process.id, promise, requestUtils.cancel)
-        const { status } = requestUtils.getProcessState()
+        const { status } = helpers.getProcessInfo(requestName, process.id)
 
         if (status === 'created' || status === 'cancelled') {
           // to show only for dev
-          console.log(status)
+
           const description =
             status === 'cancelled'
               ? 'was cancelled after being created'

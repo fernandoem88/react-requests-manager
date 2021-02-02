@@ -370,7 +370,7 @@ const getHelpers = (store: Store, contextId: string) => {
     const suspendedId = ids.find((reqId) => byId[reqId].status === 'suspended')
     if (suspendedId) {
       const { resolver } = getResolver(suspendedId)
-      resolver && resolver()
+      resolver()
     }
   }
 
@@ -408,8 +408,8 @@ const getHelpers = (store: Store, contextId: string) => {
           doAbortGroup(idsToAbort)
           clearAbortedProcesses(pl.requestName, idsToAbort)
           deleteAllAbortInfo(pl.requestName)
-          deleteAllResolvers(pl.requestName)
-          // startNextSuspendedProcessInqueue(pl.requestName)
+          idsToAbort.forEach(deleteResolver)
+          startNextSuspendedProcessInqueue(pl.requestName)
           break
         }
         case 'ON_ABORT':
