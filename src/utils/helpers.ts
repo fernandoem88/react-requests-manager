@@ -298,7 +298,8 @@ const getHelpers = (store: Store, contextId: string) => {
   const doCancel = (requestName: string, processId: string) => {
     modifyRequestInfo(requestName, (draft) => {
       const { byId, ids } = draft.processes
-      if (!byId[processId].keepInStateOnCancel) {
+      const process = byId[processId]
+      if (!process || !process.keepInStateOnCancel) {
         delete byId[processId]
         ids.splice(ids.indexOf(processId), 1)
       }
@@ -327,13 +328,18 @@ const getHelpers = (store: Store, contextId: string) => {
     modifyRequestInfo(requestName, (draft) => {
       const { ids, byId } = draft.processes
       draft.processes.ids = ids.filter((id) => {
-        const { keepInStateOnAbort, status } = byId[id]
-        const keepInState = keepInStateOnAbort
-        const shouldDelete = status === 'aborted' && !keepInState && set.has(id)
-        if (shouldDelete) {
-          delete byId[id]
+        const process = byId[id]
+        if (process) {
+          const { keepInStateOnAbort, status } = byId[id]
+          const keepInState = keepInStateOnAbort
+          const shouldDelete =
+            status === 'aborted' && !keepInState && set.has(id)
+          if (shouldDelete) {
+            delete byId[id]
+          }
+          return !shouldDelete
         }
-        return !shouldDelete
+        return false
       })
     })
   }
@@ -364,7 +370,7 @@ const getHelpers = (store: Store, contextId: string) => {
     if (req.type !== 'QueueType') return
     const { byId, ids } = req.processes
     const isProcessing = ids.some(
-      (reqId) => byId[reqId].status === 'processing'
+      (reqId) => byId[reqId]?.status === 'processing'
     )
     if (isProcessing) return
     const suspendedId = ids.find((reqId) => byId[reqId].status === 'suspended')

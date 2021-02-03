@@ -100,34 +100,26 @@ const createRequests = () => <
 
         const keepInState = options?.keepInStateOnAbort
 
-        const filteredIds = ids.filter((id) => id !== processId)
+        const otherIds = ids.filter((id) => id !== processId)
+        console.log('processId', processId)
+        console.log('to abort', otherIds)
         const processIdsToAbort = !selector
-          ? filteredIds
-          : filteredIds.filter((id, idx) =>
-              selector(helpers.converters.processToState(byId[id]), idx)
+          ? otherIds
+          : otherIds.filter(
+              (id, idx) =>
+                !byId[id] ||
+                selector(helpers.converters.processToState(byId[id]), idx)
             )
         if (processIdsToAbort.length) {
-          if (processIdsToAbort.length === 1) {
-            const payload = {
-              requestName: reqName,
-              processId: processIdsToAbort[0],
-              keepInState,
-              reason: 'previous'
-            }
-            const shouldDispatch = stateReducer.ON_ABORT(payload)
-            if (!shouldDispatch) return
-            helpers.dispatchToHooks({ type: 'ON_ABORT', payload })
-          } else {
-            const payload = {
-              requestName: reqName,
-              processIds: processIdsToAbort,
-              keepInState,
-              reason: 'previous'
-            }
-            const shouldDispatch = stateReducer.ON_ABORT_GROUP(payload)
-            if (!shouldDispatch) return
-            helpers.dispatchToHooks({ type: 'ON_ABORT_GROUP', payload })
+          const payload = {
+            requestName: reqName,
+            processIds: processIdsToAbort,
+            keepInState,
+            reason: 'previous'
           }
+          const shouldDispatch = stateReducer.ON_ABORT_GROUP(payload)
+          if (!shouldDispatch) return
+          helpers.dispatchToHooks({ type: 'ON_ABORT_GROUP', payload })
         }
       }
 
@@ -202,10 +194,9 @@ const createRequests = () => <
         }
         const shouldDispatch = stateReducer.ON_FINISH(payload)
         if (!shouldDispatch) {
-          const { handleAbortOnErrorCallback } = helpers.getProcessInfo(
-            reqName,
-            processId
-          )
+          const process = helpers.getProcessInfo(reqName, processId)
+          if (!process) return
+          const { handleAbortOnErrorCallback } = process
           if (handleAbortOnErrorCallback && onFinish) {
             onFinish() // callable only once
             helpers.modifyRequestInfo(reqName, (draft) => {

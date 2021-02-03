@@ -6,10 +6,11 @@ const { getConfig } = configsUtils
 const { api } = getConfig()
 type Params = { delay?: number; index: number }
 
-export const login = Single(async (utils) => {
+export const login = Single(async (utils, params: Params) => {
   if (utils.getRequestState().isProcessing) return false
-  const { abort, execute } = api.fetchData()
-  utils.onAbort(abort)
+  const { abort, execute } = api.fetchData(params.delay)
+  // utils.onAbort(abort)
+  utils.onAbort(abort, { catchError: true })
   utils.start()
   try {
     const result = await execute()
@@ -27,24 +28,24 @@ export const login = Single(async (utils) => {
   }
 })
 
-export const pagination = Single(async (utils) => {
+export const pagination = Single(async (utils, params: Params) => {
   utils.abortPrevious(undefined, { keepInStateOnAbort: true })
-  const { abort, execute } = api.fetchData()
-  utils.onAbort(abort)
+  const { abort, execute } = api.fetchData(params.delay)
+  // utils.onAbort(abort)
+
   utils.start()
+  utils.onAbort(abort, { catchError: true })
   try {
     const result = await execute()
     utils.finish('success', () => {
       // success logic goes here: dispatch to redux, ...
       helpers.dispatchSuccess(utils, result)
     })
-    return
   } catch (error) {
     utils.finish({ status: 'error', error: error?.message }, () => {
       // error logic goes here: dispatch to redux, ...
       helpers.dispatchError(utils, error)
     })
-    return
   }
 })
 
@@ -74,7 +75,8 @@ export const multiFetch = Multi(async (utils, params: Params) => {
     // on start logic: clear request error, dispatch to redux, ...
   })
   const { abort, execute } = api.fetchData(params.delay, ['user 1', 'user 2'])
-  utils.onAbort(abort)
+  // utils.onAbort(abort)
+  utils.onAbort(abort, { catchError: true })
   try {
     const result = await execute()
     utils.finish('success', () => {
@@ -95,7 +97,8 @@ export const queueFetch = Queue(async (utils, params: Params) => {
     // utils.clearError()
   })
   const { abort, execute } = api.fetchData(params.delay, ['user 1', 'user 2'])
-  utils.onAbort(abort)
+  // utils.onAbort(abort)
+  utils.onAbort(abort, { catchError: true })
   try {
     const result = await execute()
     utils.finish('success', () => {

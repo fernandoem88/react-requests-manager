@@ -163,7 +163,7 @@ const getReducer = (store: Store, contextId: string) => {
         !process ||
         process.status !== 'processing'
       ) {
-        if (process.status === 'aborted') {
+        if (process?.status === 'aborted') {
           if (process.handleAbortOnErrorCallback) {
             helpers.modifyRequestInfo(requestName as string, (draft) => {
               draft.error = error

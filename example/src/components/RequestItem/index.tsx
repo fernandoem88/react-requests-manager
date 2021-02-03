@@ -15,12 +15,29 @@ import { $$ } from '../../RequestsManager'
 import ProcessItem from '../ProcessItem'
 
 interface Props {
-  requestName: keyof typeof $$.requests
+  // requestName: keyof typeof $$.requests
   duration?: number
 }
+
+const labels = {
+  singleFetch: 'simple single type',
+  multiFetch: 'simple multi type',
+  queueFetch: 'simple queue type'
+}
+
+const requestsList = Object.entries($$.requests).map(([key]) => {
+  return {
+    key,
+    label: labels[key] || key
+  }
+})
 const RequestItem: React.FC<Props> = (props) => {
-  const { requestName } = props
-  const req = $$.useRequests((reqs) => reqs[props.requestName])
+  // const { requestName } = props
+  const [requestName, setRequestName] = useState<keyof typeof $$.requests>(
+    requestsList[0].key as any
+  )
+
+  const req = $$.useRequests((reqs) => reqs[requestName])
   const [version, setVersion] = useState('')
   const [ids, setIds] = useState<string[]>([])
 
@@ -50,7 +67,23 @@ const RequestItem: React.FC<Props> = (props) => {
   return (
     <Root>
       <Header>
-        <Title>{requestName}</Title>
+        <Title>
+          <select
+            value={requestName}
+            onChange={(e) => {
+              const newReqName = e.target.value as any
+              $$.extraActions.abort({ requestName })
+              // $$.extraActions.reset(requestName)
+              setRequestName(newReqName)
+            }}
+          >
+            {requestsList.map((v) => (
+              <option key={v.key} value={v.key}>
+                {v.label}
+              </option>
+            ))}
+          </select>
+        </Title>
         {req.isProcessing && <Status>is processing</Status>}
         <ActionWrapper>
           {(req.isProcessing || canReset) && (
@@ -64,7 +97,7 @@ const RequestItem: React.FC<Props> = (props) => {
         {ids.map((id, index) => (
           <ProcessItem
             key={id}
-            requestName={props.requestName}
+            requestName={requestName as any}
             index={index}
             duration={props.duration}
             version={version}
