@@ -1,14 +1,19 @@
 import React from 'react'
 import ReactDOM from 'react-dom'
-import { Provider } from './components/Provider'
-import { reducer } from './reducers'
+import { createStore, Store } from 'redux'
+import { Provider } from 'react-redux'
+// import { Provider } from './components/Provider'
+import { reducer, State } from './reducers'
 import { configsUtils } from './configs'
 import App from './App'
+import { $$ } from './RequestsManager'
 
-const initialState = { title: 'title', todoList: [] }
+const initialState = { title: 'title', users: [] }
+export const APP_STORE: Store<State, any> = createStore(reducer, initialState)
+export const useMixedSelectors = $$.bindToStateManager(APP_STORE)
 const Root = React.memo((props) => {
   return (
-    <Provider reducer={reducer} initialState={initialState}>
+    <Provider store={APP_STORE}>
       <configsUtils.HooksWrapper />
       {props.children}
     </Provider>

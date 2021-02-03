@@ -153,6 +153,12 @@ const getHelpers = (store: Store, contextId: string) => {
   const getSubscribersCount = () => {
     return getContextRef().info.subscribersCount
   }
+  const getShouldDispatch = () => {
+    return !!getContextRef().shouldDispatch
+  }
+  const setShouldDispatch = (shouldDispatch?: boolean) => {
+    getContextRef().shouldDispatch = shouldDispatch
+  }
   const getContextInfo = () => {
     // giving the object with reference
     return { ...getContextRef().info } as ContextInfo<any>
@@ -393,69 +399,81 @@ const getHelpers = (store: Store, contextId: string) => {
   }
 
   // after state changed: Post processing
+  const postProcess = <K extends ActionType>({ type, payload }: Action<K>) => {
+    switch (type) {
+      case 'ON_RESET_REQUEST': {
+        // const pl = payload as ActionPayload['ON_FINISH']
+        // deleteAllResolvers(pl.requestName)
+        // deleteAllAbortInfo(pl.requestName)
+        break
+      }
+      case 'ON_FINISH': {
+        const pl = payload as ActionPayload['ON_FINISH']
+        const { byId, ids } = getRequestInfo(pl.requestName).processes
+        const idsToAbort = ids.filter((id) => byId[id].status === 'aborted')
+        doAbortGroup(idsToAbort)
+        clearAbortedProcesses(pl.requestName, idsToAbort)
+        deleteAllAbortInfo(pl.requestName)
+        idsToAbort.forEach(deleteResolver)
+        startNextSuspendedProcessInqueue(pl.requestName)
+        break
+      }
+      case 'ON_ABORT':
+        {
+          const pl = payload as ActionPayload['ON_ABORT']
+          clearAbortedProcesses(pl.requestName, [pl.processId])
+          deleteAbortInfo(pl.processId) // initial state of abort info
+          deleteResolver(pl.processId)
+          startNextSuspendedProcessInqueue(pl.requestName)
+        }
+        break
+      case 'ON_ABORT_GROUP':
+        {
+          const pl = payload as ActionPayload['ON_ABORT_GROUP']
+          clearAbortedProcesses(pl.requestName, pl.processIds)
+          pl.processIds.forEach(deleteResolver)
+          pl.processIds.forEach(deleteAbortInfo)
+          startNextSuspendedProcessInqueue(pl.requestName)
+        }
+        break
+      case 'ON_CANCEL':
+        {
+          const pl = payload as ActionPayload['ON_CANCEL']
+          const { keepInState } = pl
+          if (!keepInState) {
+            doCancel(pl.requestName, pl.processId)
+          }
+          clearCancelledProcesses(pl.requestName, [pl.processId])
+          deleteAbortInfo(pl.processId)
+          deleteResolver(pl.processId)
+          startNextSuspendedProcessInqueue(pl.requestName)
+        }
+        break
+      default:
+        break
+    }
+  }
+
+  // after state changed: Post processing
   const dispatchToHooks = <K extends ActionType>(
     { type, payload }: Action<K>,
     skipDispatch?: boolean
   ) => {
+    const subscribersCount = getSubscribersCount()
+    postProcess({ type, payload })
+    setShouldDispatch(true)
     setTimeout(() => {
-      const dispatcher = getDispatcher()
-      const subscribersCount = getSubscribersCount()
-      switch (type) {
-        case 'ON_RESET_REQUEST': {
-          // const pl = payload as ActionPayload['ON_FINISH']
-          // deleteAllResolvers(pl.requestName)
-          // deleteAllAbortInfo(pl.requestName)
-          break
+      // using canDispatch value to dispatch only once,
+      // since the hooks are getting the last state using the context id,
+      // it's enought to dispatch only once discarding all other update dispatch
+      const canDispatch = getShouldDispatch()
+      if (canDispatch) {
+        const dispatcher = getDispatcher()
+        if (subscribersCount > 0 && !skipDispatch) {
+          dispatcher.next({ type, payload, contextId })
         }
-        case 'ON_FINISH': {
-          const pl = payload as ActionPayload['ON_FINISH']
-          const { byId, ids } = getRequestInfo(pl.requestName).processes
-          const idsToAbort = ids.filter((id) => byId[id].status === 'aborted')
-          doAbortGroup(idsToAbort)
-          clearAbortedProcesses(pl.requestName, idsToAbort)
-          deleteAllAbortInfo(pl.requestName)
-          idsToAbort.forEach(deleteResolver)
-          startNextSuspendedProcessInqueue(pl.requestName)
-          break
-        }
-        case 'ON_ABORT':
-          {
-            const pl = payload as ActionPayload['ON_ABORT']
-            clearAbortedProcesses(pl.requestName, [pl.processId])
-            deleteAbortInfo(pl.processId) // initial state of abort info
-            deleteResolver(pl.processId)
-            startNextSuspendedProcessInqueue(pl.requestName)
-          }
-          break
-        case 'ON_ABORT_GROUP':
-          {
-            const pl = payload as ActionPayload['ON_ABORT_GROUP']
-            clearAbortedProcesses(pl.requestName, pl.processIds)
-            pl.processIds.forEach(deleteResolver)
-            pl.processIds.forEach(deleteAbortInfo)
-            startNextSuspendedProcessInqueue(pl.requestName)
-          }
-          break
-        case 'ON_CANCEL':
-          {
-            const pl = payload as ActionPayload['ON_CANCEL']
-            const { keepInState } = pl
-            if (!keepInState) {
-              doCancel(pl.requestName, pl.processId)
-            }
-            clearCancelledProcesses(pl.requestName, [pl.processId])
-            deleteAbortInfo(pl.processId)
-            deleteResolver(pl.processId)
-            startNextSuspendedProcessInqueue(pl.requestName)
-          }
-          break
-        default:
-          break
       }
-
-      if (subscribersCount > 0 && !skipDispatch) {
-        dispatcher.next({ type, payload, contextId })
-      }
+      setShouldDispatch(false)
     }, 0)
   }
 

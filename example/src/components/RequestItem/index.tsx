@@ -48,9 +48,16 @@ const RequestItem: React.FC<Props> = (props) => {
   }
   const handleReset = () => canReset && $$.extraActions.reset(requestName)
 
-  const handleClick = () => {
+  const handleActionClick = () => {
     handleAbort()
     handleReset()
+  }
+
+  const handleSelection = (e: any) => {
+    const newReqName = e.target.value as any
+    $$.extraActions.abort({ requestName })
+    $$.extraActions.reset(requestName)
+    setRequestName(newReqName)
   }
 
   const actionBtnLabel = req.isProcessing
@@ -68,15 +75,7 @@ const RequestItem: React.FC<Props> = (props) => {
     <Root>
       <Header>
         <Title>
-          <select
-            value={requestName}
-            onChange={(e) => {
-              const newReqName = e.target.value as any
-              $$.extraActions.abort({ requestName })
-              // $$.extraActions.reset(requestName)
-              setRequestName(newReqName)
-            }}
-          >
+          <select value={requestName} onChange={handleSelection}>
             {requestsList.map((v) => (
               <option key={v.key} value={v.key}>
                 {v.label}
@@ -87,7 +86,7 @@ const RequestItem: React.FC<Props> = (props) => {
         {req.isProcessing && <Status>is processing</Status>}
         <ActionWrapper>
           {(req.isProcessing || canReset) && (
-            <Btn canReset={canReset} onClick={handleClick}>
+            <Btn canReset={canReset} onClick={handleActionClick}>
               {actionBtnLabel}
             </Btn>
           )}

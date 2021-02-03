@@ -220,11 +220,12 @@ declare module 'types' {
       resolvers: Dictionary<{
         resolver: () => void
       }>
+      shouldDispatch?: boolean
     }>
-    dispatchers: {
-      $redux: Subject<any>
-      $actions: Subject<any>
-    }
+    // dispatchers: {
+    //   $redux: Subject<any>
+    //   $actions: Subject<any>
+    // }
   }
 
   // ******* ******* ******* \\
@@ -366,7 +367,7 @@ declare module 'state-manager-store' {
   export interface StateManagerStore<State = any> {
     // dispatch: (action: A) => void
     getState: () => State
-    subscribe: (listener: () => void) => { unsubscribe: Function }
+    subscribe: (listener: () => void) => Function | { unsubscribe: Function }
   }
 }
 

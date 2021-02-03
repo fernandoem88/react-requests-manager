@@ -14,22 +14,22 @@ const createContextsGroup = () => <
 >(
   configurators: Configurators
 ) => {
-  type Group = Configurators
-  type GroupKey = keyof Group
-  type Requests<Ctx extends GroupKey> = ReturnType<Group[Ctx]> extends {
+  type Contexts = Configurators
+  type ContextKey = keyof Contexts
+  type Requests<Ctx extends ContextKey> = ReturnType<Contexts[Ctx]> extends {
     requests: infer R
   }
     ? R
     : any
 
-  type Actions<Ctx extends GroupKey> = ReturnType<Group[Ctx]> extends {
+  type Actions<Ctx extends ContextKey> = ReturnType<Contexts[Ctx]> extends {
     actions: infer R
   }
     ? R
     : any
-  type RequestKey<Ctx extends GroupKey> = keyof Requests<Ctx>
+  type RequestKey<Ctx extends ContextKey> = keyof Requests<Ctx>
   type RequestsParams<
-    Ctx extends GroupKey,
+    Ctx extends ContextKey,
     K extends RequestKey<Ctx>
   > = Requests<Ctx>[K] extends (...params: infer Params) => any
     ? Params[0]
@@ -37,7 +37,7 @@ const createContextsGroup = () => <
   const store = createStore()
   const dispatcher = new Subject()
 
-  type GroupValue<Ctx extends keyof Group> = {
+  type ContextValue<Ctx extends keyof Contexts> = {
     requests: Requests<Ctx>
     actions: Actions<Ctx>
     getRequestsState: () => {
@@ -45,9 +45,9 @@ const createContextsGroup = () => <
     }
     helpers: ReturnType<typeof getHelpers>
   }
-  const createContext = <Gp extends GroupKey>(
-    configurator: Configurators[Gp],
-    contextName: Gp
+  const createContext = <Ctx extends ContextKey>(
+    configurator: Configurators[Ctx],
+    contextName: Ctx
   ) => {
     const { contextId, requests, actions } = configurator(
       store,
@@ -57,12 +57,12 @@ const createContextsGroup = () => <
     helpers.setContextDispatcher(dispatcher)
     const getRequestsState = () =>
       helpers.getRequests() as {
-        [K in RequestKey<Gp>]: RequestState<RequestsParams<Gp, K>>
+        [K in RequestKey<Ctx>]: RequestState<RequestsParams<Ctx, K>>
       }
 
     return {
-      requests: requests as Requests<Gp>,
-      actions: actions as Actions<Gp>,
+      requests: requests as Requests<Ctx>,
+      actions: actions as Actions<Ctx>,
       getRequestsState,
       helpers
     }
@@ -70,11 +70,11 @@ const createContextsGroup = () => <
 
   const contexts = mapRecord(configurators, (configurator, ctx) => {
     return createContext<typeof ctx>(configurator, ctx)
-  }) as { [Ctx in GroupKey]: GroupValue<Ctx> }
+  }) as { [Ctx in ContextKey]: ContextValue<Ctx> }
 
   type RequestsState = {
-    [Gp in keyof Group]: {
-      [K in RequestKey<Gp>]: RequestState<RequestsParams<Gp, K>>
+    [Ctx in keyof Contexts]: {
+      [K in RequestKey<Ctx>]: RequestState<RequestsParams<Ctx, K>>
     }
   }
   const getAllRequestsStates = () =>
@@ -131,19 +131,15 @@ const createContextsGroup = () => <
       }
     }, [])
     useEffect(() => {
-      // const dispatcher = helpers.getDispatcher()
-      const doUpdate = (shouldUpdate: boolean) => {
+      const doUpdate = () => {
+        const shouldUpdate = checkUpdate(paramsRef.current)
         if (shouldUpdate) {
           shouldCheckUpdateInMainBodyRef.current = false
           forceUpdate()
         }
       }
-      const subscription = dispatcher.subscribe(() => {
-        doUpdate(checkUpdate(paramsRef.current))
-      })
-      return () => {
-        subscription.unsubscribe()
-      }
+      const subscription = dispatcher.subscribe(doUpdate)
+      return subscription.unsubscribe
     }, [checkUpdate])
     return selectedValueRef.current.value
   }
@@ -160,7 +156,7 @@ const createContextsGroup = () => <
       Selector extends (
         state: SMState,
         requests: {
-          [Ctx in GroupKey]: {
+          [Ctx in ContextKey]: {
             [K in RequestKey<Ctx>]: RequestState<RequestsParams<Ctx, K>>
           }
         },
@@ -172,6 +168,8 @@ const createContextsGroup = () => <
     ) => {
       const [params] = args
       // am using useState to not define the initial state again
+      const selectorRef = useRef(selector)
+      selectorRef.current = selector
       const [initialCombined] = useState(getCombinedState)
       const selectedValueRef = useRef({
         value: copy(
@@ -181,9 +179,9 @@ const createContextsGroup = () => <
       const paramsRef = useShallowEqualRef(params)
 
       // checkUpdate returns true if the selected value is updated
-      const { current: checkUpdate } = useRef(() => {
+      const checkUpdate = useCallback(() => {
         const combined = getCombinedState()
-        const newSelectedValue = selector(
+        const newSelectedValue = selectorRef.current(
           combined.state,
           combined.requests,
           paramsRef.current
@@ -195,7 +193,7 @@ const createContextsGroup = () => <
         if (isEqual) return false
         selectedValueRef.current = { value: copy(newSelectedValue) }
         return true
-      })
+      }, [])
       // if shouldCheckUpdateInMainBodyRef.current is true, we will check for update in the body of this hook not in the useEffect
       const shouldCheckUpdateInMainBodyRef = useRef(true)
       // const shouldCheckUpdateInUseEffectRef = useRef(false)
@@ -219,40 +217,38 @@ const createContextsGroup = () => <
           }
         }
         // state manager
-        const smSubscription = stateManagerStore.subscribe(() => {
-          doUpdate()
-        })
+        const smSubscription = stateManagerStore.subscribe(doUpdate)
         // requests manager
-        const rmSubscription = dispatcher.subscribe(() => {
-          doUpdate()
-        })
+        const rmSubscription = dispatcher.subscribe(doUpdate)
         return () => {
-          smSubscription.unsubscribe()
+          if (typeof smSubscription === 'function') {
+            smSubscription()
+          } else if ('unsubscribe' in smSubscription) {
+            smSubscription.unsubscribe()
+          }
           rmSubscription.unsubscribe()
         }
       }, [])
       return selectedValueRef.current.value
     }
-    const createNamedSelectorHook = <Selectors extends Record<any, any>>(
-      selectors: Selectors
-    ) => {
-      const useNamedSelector = <Key extends keyof Selectors>(key: Key) => {
-        return selectors[key]
-      }
-      return useNamedSelector
-    }
-    const createSelectorHook = () => useSelector
-    return { createSelectorHook, createNamedSelectorHook }
+    // const createNamedSelectorHook = <Selectors extends Record<any, any>>(
+    //   selectors: Selectors
+    // ) => {
+    //   const useNamedSelector = <Key extends keyof Selectors>(key: Key) => {
+    //     return selectors[key]
+    //   }
+    //   return useNamedSelector
+    // }
+    // const createSelectorHook = () => useSelector
+    return useSelector // { createSelectorHook, createNamedSelectorHook }
   }
 
   return {
-    requests: mapRecord(contexts, ({ requests }: any) => ({ ...requests })) as {
-      [Ctx in GroupKey]: Requests<Ctx>
+    requests: mapRecord(contexts, ({ requests }: any) => requests) as {
+      [K in ContextKey]: Requests<K>
     },
-    extraActions: mapRecord(contexts, ({ actions = {} }: any) => ({
-      ...actions
-    })) as {
-      [Ctx in GroupKey]: Actions<Ctx>
+    extraActions: mapRecord(contexts, ({ actions }: any) => actions) as {
+      [K in ContextKey]: Actions<K>
     },
     useRequests,
     getState: getAllRequestsStates,

@@ -58,16 +58,13 @@ const createContext = () => <
       value: initialSelectedValue
     })
     // checkUpdate returns true if the selected value is updated
-    const checkUpdate = useCallback((parameter: any) => {
+    const checkUpdate = useCallback(() => {
       const reqs = helpers.getRequests() as RequestsState
-      const newSelectedValue = selectorRef.current(reqs, parameter)
+      const newSelectedValue = selectorRef.current(reqs, paramsRef.current)
       const isEqual = shallowEqual(
         newSelectedValue,
         selectedValueRef.current.value
       )
-      if (params && isEqual) {
-        // debugger
-      }
       if (isEqual) return false
       selectedValueRef.current = { value: copy(newSelectedValue) }
       return true
@@ -79,7 +76,7 @@ const createContext = () => <
 
     if (shouldCheckUpdateInMainBodyRef.current) {
       // shouldCheckUpdateInUseEffectRef.current = false
-      checkUpdate(paramsRef.current)
+      checkUpdate()
     } else {
       // it's false only when there was an update in useEffect so to avoid checking it twice
       shouldCheckUpdateInMainBodyRef.current = true
@@ -95,7 +92,7 @@ const createContext = () => <
     useEffect(() => {
       const dispatcher = helpers.getDispatcher()
       const doUpdate = () => {
-        const shouldUpdate = checkUpdate(paramsRef.current)
+        const shouldUpdate = checkUpdate()
         if (shouldUpdate) {
           shouldCheckUpdateInMainBodyRef.current = false
           forceUpdate()
@@ -105,21 +102,19 @@ const createContext = () => <
         if (action.contextId !== contextId) return
         doUpdate()
       })
-      return () => {
-        subscription.unsubscribe()
-      }
+      return subscription.unsubscribe
     }, [])
     return selectedValueRef.current.value as ReturnType<Selector>
   }
 
-  const bindToStateManager = <SMStore extends StateManagerStore<any>>(
-    stateManagerStore: SMStore
+  const bindToStateManager = <SMState>(
+    stateManagerStore: StateManagerStore<SMState>
   ) => {
     const getCombinedState = () => ({
       state: stateManagerStore.getState(),
       requests: getRequestsState()
     })
-    type SMState = ReturnType<SMStore['getState']>
+    // type SMStore = StateManagerStore<SMState>
     const useSelector = <
       Selector extends (
         state: SMState,
@@ -135,6 +130,8 @@ const createContext = () => <
       const [params] = args
       // am using useState to not define the initial state again
       const [initialCombined] = useState(getCombinedState)
+      const selectorRef = useRef(selector)
+      selectorRef.current = selector
       const selectedValueRef = useRef({
         value: copy(
           selector(initialCombined.state, initialCombined.requests, params)
@@ -142,9 +139,9 @@ const createContext = () => <
       })
       const paramsRef = useShallowEqualRef(params)
       // checkUpdate returns true if the selected value is updated
-      const { current: checkUpdate } = useRef(() => {
+      const checkUpdate = useCallback(() => {
         const combined = getCombinedState()
-        const newSelectedValue = selector(
+        const newSelectedValue = selectorRef.current(
           combined.state,
           combined.requests,
           paramsRef.current
@@ -156,12 +153,10 @@ const createContext = () => <
         if (isEqual) return false
         selectedValueRef.current = { value: copy(newSelectedValue) }
         return true
-      })
+      }, [])
       // if shouldCheckUpdateInMainBodyRef.current is true, we will check for update in the body of this hook not in the useEffect
       const shouldCheckUpdateInMainBodyRef = useRef(true)
       // const shouldCheckUpdateInUseEffectRef = useRef(false)
-
-      // const parameter = paramsRef.current
       if (shouldCheckUpdateInMainBodyRef.current) {
         // shouldCheckUpdateInUseEffectRef.current = false
         checkUpdate()
@@ -174,7 +169,7 @@ const createContext = () => <
       //   shouldCheckUpdateInUseEffectRef.current = true
       // })
       useEffect(() => {
-        const $context = helpers.getDispatcher()
+        const dispatcher = helpers.getDispatcher()
         const doUpdate = () => {
           const shouldUpdate = checkUpdate()
           if (shouldUpdate) {
@@ -182,30 +177,32 @@ const createContext = () => <
             forceUpdate()
           }
         }
-        const stateManagerSubscription = stateManagerStore.subscribe(() => {
-          doUpdate()
-        })
-        const requestsManagerSubscription = $context.subscribe((action) => {
+        const smSubscription = stateManagerStore.subscribe(doUpdate)
+        const rmSubscription = dispatcher.subscribe((action) => {
           if (action.contextId !== contextId) return
           doUpdate()
         })
         return () => {
-          stateManagerSubscription.unsubscribe()
-          requestsManagerSubscription.unsubscribe()
+          if (typeof smSubscription === 'function') {
+            smSubscription()
+          } else if ('unsubscribe' in smSubscription) {
+            smSubscription.unsubscribe()
+          }
+          rmSubscription.unsubscribe()
         }
       }, [])
       return selectedValueRef.current.value
     }
-    const createNamedSelectorHook = <Selectors extends Record<any, any>>(
-      selectors: Selectors
-    ) => {
-      const useNamedSelector = <Key extends keyof Selectors>(key: Key) => {
-        return selectors[key]
-      }
-      return useNamedSelector
-    }
-    const createSelectorHook = () => useSelector
-    return { createSelectorHook, createNamedSelectorHook }
+    // const createNamedSelectorHook = <Selectors extends Record<any, any>>(
+    //   selectors: Selectors
+    // ) => {
+    //   const useNamedSelector = <Key extends keyof Selectors>(key: Key) => {
+    //     return selectors[key]
+    //   }
+    //   return useNamedSelector
+    // }
+    // const createSelectorHook = () => useSelector
+    return useSelector // { createSelectorHook, createNamedSelectorHook }
   }
 
   return {

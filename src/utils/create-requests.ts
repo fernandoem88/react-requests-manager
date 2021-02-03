@@ -101,8 +101,7 @@ const createRequests = () => <
         const keepInState = options?.keepInStateOnAbort
 
         const otherIds = ids.filter((id) => id !== processId)
-        console.log('processId', processId)
-        console.log('to abort', otherIds)
+
         const processIdsToAbort = !selector
           ? otherIds
           : otherIds.filter(
@@ -118,6 +117,7 @@ const createRequests = () => <
             reason: 'previous'
           }
           const shouldDispatch = stateReducer.ON_ABORT_GROUP(payload)
+          helpers.doAbortGroup(processIdsToAbort)
           if (!shouldDispatch) return
           helpers.dispatchToHooks({ type: 'ON_ABORT_GROUP', payload })
         }
@@ -286,7 +286,7 @@ const createRequests = () => <
           const description =
             status === 'cancelled'
               ? 'was cancelled after being created'
-              : 'did not started properly'
+              : 'did not started properly, if you cancelled it using "return false", just ignore this warning! every created process must turned to started, suspended or cancelled!'
           console.warn(
             `Warning on ${requestName} request: process with id ${process.id} ${description}`
           )
@@ -371,42 +371,35 @@ const createRequests = () => <
         const { requests } = helpers.getContextInfo()
         const keepInState = options?.keepInStateOnAbort
         const reason = options?.reason
-        if (!reqName) {
-          // abort all requests
-          Object.entries(requests).forEach(([name, req]) => {
-            const payload = {
-              requestName: name,
-              processIds: req.processes.ids,
-              keepInState,
-              reason
-            }
-            helpers.doAbortGroup(req.processes.ids)
-            const shouldDispatch = stateReducer.ON_ABORT_GROUP(payload)
-            if (shouldDispatch) {
-              helpers.dispatchToHooks({ type: 'ON_ABORT_GROUP', payload })
-            }
-          })
-        } else {
-          const ids = Object.entries(requests[reqName].processes.byId)
-            .filter(
-              ([_, proceesInfo]) =>
-                !selector ||
-                (selector as any)(
-                  helpers.converters.processToState(proceesInfo)
-                )
-            )
-            .map(([id]) => id)
-          helpers.doAbortGroup(ids)
+
+        const innerAbort = (name: string, ids: string[]) => {
+          if (!ids.length) return
           const payload = {
-            requestName: reqName as string,
+            requestName: name,
             processIds: ids,
             keepInState,
             reason
           }
+          helpers.doAbortGroup(ids)
           const shouldDispatch = stateReducer.ON_ABORT_GROUP(payload)
           if (shouldDispatch) {
             helpers.dispatchToHooks({ type: 'ON_ABORT_GROUP', payload })
           }
+        }
+        if (!reqName) {
+          // abort all requests
+          Object.entries(requests).forEach(([name, req]) => {
+            innerAbort(name, req.processes.ids)
+          })
+        } else {
+          const { ids, byId } = requests[reqName].processes
+          const idsToAbort = ids.filter(
+            (id) =>
+              !selector ||
+              !byId[id] ||
+              (selector as any)(helpers.converters.processToState(byId[id]))
+          )
+          innerAbort(reqName as string, idsToAbort)
         }
       }
       return {
