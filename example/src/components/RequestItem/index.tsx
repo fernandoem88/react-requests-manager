@@ -20,9 +20,9 @@ interface Props {
 }
 
 const labels = {
-  singleFetch: 'single type',
-  multiFetch: 'multi type',
-  queueFetch: 'queue type'
+  fetchUser: 'single type',
+  postComment: 'multi type',
+  fetchImage: 'queue type'
 }
 
 const requestsList = Object.entries($$.requests).map(([key]) => {

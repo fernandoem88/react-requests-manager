@@ -27,10 +27,11 @@ for example if we define a fetchData
 ```ts
 import { Single } from 'react-requests-manager'
 
-const request = async (utils: RequestUtils<Params>, params: Params) => {
-  // request logic
-}
-const fetchData = Single<Params>(request)
+const fetchData = Single<Params>(
+  async (utils: RequestUtils<Params>, params: Params) => {
+    // request logic
+  }
+)
 ```
 
 - **utils**: first parameter of the **request callback** and a provided utilities object that will let you manage your request state.
@@ -75,13 +76,13 @@ export const fetchUser = Single(async (utils, userId: string) => {
 
 // Queue: a process is suspended untill the previous will finish
 // all processes will eventually reach "utils.finish" (success or error) if no one abort/cancel them
-export const postImage = Queue(async (utils, image: Image) => {
+export const fetchImage = Queue(async (utils, image: Image) => {
   // in this example, utils will be of type RequestUtilsQueue<Image>
   await utils.inQueue(function onStart(){
     // on start logic: optional
   })
   // you should replace this with a working example
-  const xhqr = API.postImage(image)
+  const xhqr = API.fetchImage(image)
   utils.onAbort(function abort(){
     // abort logic
     xhqr.abort()
@@ -95,7 +96,7 @@ export const postImage = Queue(async (utils, image: Image) => {
 })
 
 // Multi: all processes will eventually reach "utils.finish" (success or error) if no one abort/cancel them
-export const deleteComment = Multi(async (utils, comment: { id: string }) => {
+export const postComment = Multi(async (utils, comment: { id: string }) => {
   // in this example, utils will be of type RequestUtils<{ id: string }>
   // the request body is the same as in the case of Single Request Type
   utils.start()
@@ -123,7 +124,7 @@ let's then implement it in the **requests-manager/index.ts** file as follows
 ```ts
 import { createRequests, createManager } from 'react-requests-manager'
 import * as REQS from './requests'
-// REQS = { fetchUser, postImage, deleteComment }
+// REQS = { fetchUser, fetchImage, postComment }
 
 // userRC: user requests configurator: helper that allows us to bind the requests to the requests manager
 export const userRC = createRequests(REQS, {

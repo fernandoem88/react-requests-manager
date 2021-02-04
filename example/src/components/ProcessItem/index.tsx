@@ -19,7 +19,8 @@ const RequestItem: React.FC<Props> = React.memo((props) => {
 
   const process = $$.useRequests((reqs) => {
     const { details } = reqs[requestName]
-    return (details.processes as any).find((pcss: any) => pcss.id === processId)
+    if (!processId) return undefined
+    return details.processes[processId]
   })
 
   const isProcessing = !!(process?.status === 'processing')

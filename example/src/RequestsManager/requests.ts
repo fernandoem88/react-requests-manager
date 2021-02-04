@@ -50,7 +50,7 @@ export const pagination = Single(async (utils, params: Params) => {
   }
 })
 
-export const singleFetch = Single(async (utils, params: Params) => {
+export const fetchUser = Single(async (utils, params: Params) => {
   utils.start(() => {
     // on start logic: clear request error, dispatch to redux, ...
   })
@@ -73,7 +73,7 @@ export const singleFetch = Single(async (utils, params: Params) => {
 })
 
 // tslint-disable-next-line
-export const multiFetch = Multi(async (utils, params: Params) => {
+export const postComment = Multi(async (utils, params: Params) => {
   utils.start(() => {
     // on start logic: clear request error, dispatch to redux, ...
   })
@@ -95,7 +95,7 @@ export const multiFetch = Multi(async (utils, params: Params) => {
   }
 })
 
-export const queueFetch = Queue(async (utils, params: Params) => {
+export const fetchImage = Queue(async (utils, params: Params) => {
   await utils.inQueue(() => {
     // on start logic: clear request error, dispatch to redux, ...
     // utils.clearError()

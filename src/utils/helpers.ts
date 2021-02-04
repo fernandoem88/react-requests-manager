@@ -115,6 +115,7 @@ const getHelpers = (store: Store, contextId: string) => {
         suspended: 0
       }
     )
+
     const requestState: RequestState<Params> = {
       isProcessing: requestInfo.isProcessing,
       error: produce(requestInfo.error, () => {}),
@@ -123,9 +124,15 @@ const getHelpers = (store: Store, contextId: string) => {
         name: requestInfo.name,
         context: getContextName(),
         count,
-        processes: ids
-          .map((id) => converProcessInfoToState(byId[id]))
-          .filter((pcss) => pcss.status !== 'created')
+        processes: ids.reduce((acc, id) => {
+          const process = byId[id]
+          if (process.status === 'created') return acc
+          acc[id] = converProcessInfoToState(byId[id])
+          return acc
+        }, {} as Dictionary<ProcessState>)
+        // processes: ids
+        //   .map((id) => converProcessInfoToState(byId[id]))
+        //   .filter((pcss) => pcss.status !== 'created')
       }
     }
 
