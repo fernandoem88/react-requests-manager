@@ -12,17 +12,17 @@ npm install --save react-requests-manager
 
 # Request types: (**Single**, **Multi**, **Queue**)
 
-- Single: only one process can finish (success or error), and the remaining ones will automatically abort
+- **Single**: only one process can finish (success or error), and the remaining ones will automatically abort
 
-- Multi: all the started processes will eventually finish (success or error) if no one aborts or cancels them.
+- **Multi**: all the started processes will eventually finish (success or error) if no one aborts or cancels them.
 
-- Queue: a new process will be suspended untill the previous one will finish/abort/cancel
+- **Queue**: a new process will be suspended untill the previous one will finish/abort/cancel
 
 ## Usage
 
-we should pass an async callback of 1 or 2 parameters to the **request type wrapper**.
+we should pass an async callback to the **request type wrapper**.
 
-for example
+for example if we define a fetchData
 
 ```ts
 const fetchData = Single<Params>(async function requestCallback(
@@ -33,13 +33,13 @@ const fetchData = Single<Params>(async function requestCallback(
 })
 ```
 
-- utils: first parameter of the **request callback** and a provided utilities object that will let you manage your request state.
-- params: (optional): the parameter you should pass to the final request when you will use it in your components.
+- **utils**: first parameter of the **request callback** and a provided utilities object that will let you manage your request state.
+- **params**: (optional) the parameter you will probably pass to the final request when you will use it in your components.
 
-to see a more detailed example, let's define a file **requests-manager/requests.ts** where we'll define some requests
+to see a more detailed example, let's create a **requests-manager/requests.ts** file where we'll define some requests as follows
 
 ```ts
-import { Single, Multi, Queue, createRequests } from 'react-requests-manager'
+import { Single, Multi, Queue } from 'react-requests-manager'
 
 // Single: once a process calls utils.finish, others will abort
 export const fetchUser = Single(async (utils, userId: string) => {
@@ -111,7 +111,7 @@ export const deleteComment = Multi(async (utils, comment: { id: string }) => {
 
 now we have defined our requests callbacks, we can now bind them to the manager using **createManager** imported from _react-requests-manager_.
 
-let's then implement it in the **requests-manager/index.ts** file like follows
+let's then implement it in the **requests-manager/index.ts** file as follows
 
 ```ts
 import { createRequests, createManager } from 'react-requests-manager'
@@ -147,13 +147,14 @@ import React from 'react'
 import { $user } from '../requests-manager'
 
 const MyComponent: React.FC<{ userId: string }> = (props) => {
+  ...
   const fetchUserState = $user.useRequests((reqs: Requests) => reqs.fetchUser)
   // fetchUserState = { isProcessing, error: any, details: Details }
   // details = { processes: Dictionary<ProcessState>, count }
   // count = Record<processing | suspended | cancelled | aborted  | success | error | total, number>
-
+  ...
   const label = fetchUserState.isProcessing ? 'fetching user...' : ''
-
+  ...
   const handleFetch = () => {
     // this will call the fetchUser request defined in the requests.ts file
     // with userId as parameter and will turn the fetchUserState.isProcessing to true
@@ -165,10 +166,11 @@ const MyComponent: React.FC<{ userId: string }> = (props) => {
     // to check the status of this process, you can use the processId and check its status in the fetchUserState.processes dictionary
     $user.extraActions.abort('fetchUser')
   }
+  ...
   if (!!fetchUserState.error) {
     // error is the value passed in utils.finsh
     // for example: const errorMsg = "404 not found"
-    // ({ status: "success/error", error: errorMsg })
+    // utils.finish({ status: "success/error", error: errorMsg })
     // fetchUserState.error will be 404 not found
     return <div>has fetching error: {fetchUserState.error}</div>
   }
@@ -183,6 +185,8 @@ const MyComponent: React.FC<{ userId: string }> = (props) => {
   )
 }
 ```
+
+you can see a working example [here](https://codesandbox.io/s/requests-manager-1-9gv5h)
 
 # abort
 
