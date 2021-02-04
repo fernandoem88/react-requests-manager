@@ -8,12 +8,13 @@ type Params = { delay?: number; index: number }
 
 export const login = Single(async (utils, params: Params) => {
   if (utils.getRequestState().isProcessing) return false
-  const { abort, execute } = api.fetchData(params.delay)
-  // utils.onAbort(abort)
+  const { abort, send } = api.fetchData(params.delay)
+  // pass the abort function to the abortCallback
+  // to tell the manager how to abort this process
   utils.onAbort(abort, { catchError: true })
   utils.start()
   try {
-    const result = await execute()
+    const result = await send()
     utils.finish('success', () => {
       // success logic goes here: dispatch to redux, ...
       helpers.dispatchSuccess(utils, result)
@@ -29,14 +30,14 @@ export const login = Single(async (utils, params: Params) => {
 })
 
 export const pagination = Single(async (utils, params: Params) => {
-  utils.abortPrevious(undefined, { keepInStateOnAbort: true })
-  const { abort, execute } = api.fetchData(params.delay)
-  // utils.onAbort(abort)
-
+  const { abort, send } = api.fetchData(params.delay)
   utils.start()
+  utils.abortPrevious(undefined, { keepInStateOnAbort: true })
+  // pass the abort function to the abortCallback
+  // to tell the manager how to abort this process
   utils.onAbort(abort, { catchError: true })
   try {
-    const result = await execute()
+    const result = await send()
     utils.finish('success', () => {
       // success logic goes here: dispatch to redux, ...
       helpers.dispatchSuccess(utils, result)
@@ -53,10 +54,12 @@ export const singleFetch = Single(async (utils, params: Params) => {
   utils.start(() => {
     // on start logic: clear request error, dispatch to redux, ...
   })
-  const { abort, execute } = api.fetchData(params.delay, ['user 1', 'user 2'])
+  const { abort, send } = api.fetchData(params.delay)
+  // pass the abort function to the abortCallback
+  // to tell the manager how to abort this process
   utils.onAbort(abort, { catchError: true })
   try {
-    const result = await execute()
+    const result = await send()
     utils.finish('success', () => {
       // success logic goes here: dispatch to redux, ...
       helpers.dispatchSuccess(utils, result)
@@ -74,11 +77,12 @@ export const multiFetch = Multi(async (utils, params: Params) => {
   utils.start(() => {
     // on start logic: clear request error, dispatch to redux, ...
   })
-  const { abort, execute } = api.fetchData(params.delay, ['user 1', 'user 2'])
-  // utils.onAbort(abort)
+  const { abort, send } = api.fetchData(params.delay)
+  // pass the abort function to the abortCallback
+  // to tell the manager how to abort this process
   utils.onAbort(abort, { catchError: true })
   try {
-    const result = await execute()
+    const result = await send()
     utils.finish('success', () => {
       // success logic goes here: dispatch to redux, ...
       helpers.dispatchSuccess(utils, result)
@@ -96,11 +100,12 @@ export const queueFetch = Queue(async (utils, params: Params) => {
     // on start logic: clear request error, dispatch to redux, ...
     // utils.clearError()
   })
-  const { abort, execute } = api.fetchData(params.delay, ['user 1', 'user 2'])
-  // utils.onAbort(abort)
+  const { abort, send } = api.fetchData(params.delay)
+  // pass the abort function to the abortCallback
+  // to tell the manager how to abort this process
   utils.onAbort(abort, { catchError: true })
   try {
-    const result = await execute()
+    const result = await send()
     utils.finish('success', () => {
       // success logic goes here: dispatch to redux, ...
       helpers.dispatchSuccess(utils, result)

@@ -17,7 +17,7 @@ const configureFakeRequest = (
 ) => {
   const createFakeRequest = <V extends any>(resultData?: V) => {
     let innerAbort = () => {}
-    const execute = () =>
+    const send = () =>
       new Promise<V>((resolve, reject) => {
         const to = setTimeout(() => {
           if (type === 'error') {
@@ -36,7 +36,7 @@ const configureFakeRequest = (
       abort: () => {
         innerAbort()
       },
-      execute
+      send
     }
   }
   return createFakeRequest

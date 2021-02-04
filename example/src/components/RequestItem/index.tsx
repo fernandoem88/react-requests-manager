@@ -20,9 +20,9 @@ interface Props {
 }
 
 const labels = {
-  singleFetch: 'simple single type',
-  multiFetch: 'simple multi type',
-  queueFetch: 'simple queue type'
+  singleFetch: 'single type',
+  multiFetch: 'multi type',
+  queueFetch: 'queue type'
 }
 
 const requestsList = Object.entries($$.requests).map(([key]) => {
@@ -32,7 +32,6 @@ const requestsList = Object.entries($$.requests).map(([key]) => {
   }
 })
 const RequestItem: React.FC<Props> = (props) => {
-  // const { requestName } = props
   const [requestName, setRequestName] = useState<keyof typeof $$.requests>(
     requestsList[0].key as any
   )

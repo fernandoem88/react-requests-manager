@@ -1,5 +1,5 @@
 import React from 'react'
-import { useMixedSelectors } from '../../../index'
+import { useStoreAndRequests } from '../../../index'
 
 import { ActionType } from '../../../reducers'
 import { useDispatch } from 'react-redux'
@@ -11,7 +11,7 @@ interface Props {
 const User: React.FC<Props> = React.memo((props) => {
   const dispatch = useDispatch()
 
-  const user = useMixedSelectors((state) =>
+  const user = useStoreAndRequests((state) =>
     state.users.find((td) => td.id === props.id)
   )
   if (!user) return null

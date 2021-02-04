@@ -10,7 +10,7 @@ import { $$ } from './RequestsManager'
 
 const initialState = { title: 'title', users: [] }
 export const APP_STORE: Store<State, any> = createStore(reducer, initialState)
-export const { useSelector: useMixedSelectors } = $$.bindToStateManager(
+export const { useSelector: useStoreAndRequests } = $$.bindToStateManager(
   APP_STORE
 )
 const Root = React.memo((props) => {

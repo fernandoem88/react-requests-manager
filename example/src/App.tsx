@@ -1,11 +1,11 @@
 import React from 'react'
 import RequestItem from './components/RequestItem'
 
-import { useMixedSelectors } from './index'
+import { useStoreAndRequests } from './index'
 import Todo from './components/ProcessItem/User'
 
 const App = React.memo(() => {
-  const users = useMixedSelectors((state) => {
+  const users = useStoreAndRequests((state) => {
     return state.users
   })
   return (
