@@ -27,92 +27,23 @@ for example if we define a fetchData
 ```ts
 import { Single } from 'react-requests-manager'
 
-const requestCallback = async (utils: RequestUtils<Params>, params: Params) => {
+const request = async (utils: RequestUtils<Params>, params: Params) => {
   // request logic
 }
-const fetchData = Single<Params>(requestCallback)
+const fetchData = Single<Params>(request)
 ```
 
 - **utils**: first parameter of the **request callback** and a provided utilities object that will let you manage your request state.
 - **params**: (optional) the parameter you will probably pass to the final request when you will use it in your components.
 
-the most important here is to understand what utils contains and what role it plays in the request.
-
 ## Request vs Process
 
-a request is just an async action and the process is an istance of this process.
+- a request is an action where tasks will be defined
+- a process is just an istance of a given request (we can have many processes of the same request running at the same time)
 
 for example if you define a _fetchUser_ request, every time you will call it in your application, the manager will create a new process of the request. each process state will have an impact to the final request state. the _request utils_ object has access to the store and will help to define properly the process state and at the same time, also the request state.
 
-so let's see what utilities we have in utils
-
-## utils.start
-
-if you are familiar with redux-thunk, you probably know that before sending a request to the server, you should dispatch a requestStart to the redux store, so utils.start works at the same way.
-
-```ts
-utils.start();
-// your process state will turn to process.status = "processing"
-...
-// if you have update to do on start, you can pass a callback
-utils.start(function onStart(){
-  // dispatch to redux
-  // utils.clearError(  )
-})
-```
-
-## utils.inQueue (only for Queue type wrapper)
-
-```ts
-await utils.inQueue(function onStart() {
-  // on start logic
-})
-```
-
-## utils.finish
-
-when you have the server response you will probably need to dispatch it your application state manager (redux for example), this is the place to do so.
-
-```ts
-type StatusData =
-  | ProcessStatus
-  | {
-      status: ProcessStatus
-      error?: any
-      metadata: Dictionary<any>
-    }
-utils.finish(FinishData)
-
-const status: StatusData = 'success'
-// questo equivale a
-utils.finish(status, () => {
-  // this callback is optional
-  // dispatch to your application state manager
-})
-
-// the error value will be passed to the request Error value
-// while the status will be only for the process.
-utils.finish({
-  status: 'error',
-  error: {
-    pippo: '404 not found',
-    pluto: '500 server error'
-  }
-})
-```
-
-## utils.cancel
-
-after some verifications, if the process is not eligible to stay alive, you can cancel it inside the request body using exclusively the utils.cancel helper.
-a special case, if you did not call utils.start yet, you can return false to cancel the process
-
-## utils.onAbort
-
-## utils.abortPrevious
-
-## utils.getProcessState vs utils.getRequestState
-
-to see a more detailed example, let's create a **requests-manager/requests.ts** file where we'll define some requests as follows
+we can see a more detailed example, creating a **requests-manager/requests.ts** file where we'll define some requests as follows
 
 ```ts
 import { Single, Multi, Queue } from 'react-requests-manager'
@@ -183,9 +114,9 @@ export const deleteComment = Multi(async (utils, comment: { id: string }) => {
 
 ```
 
-(you can use [react-hooks-in-callback](https://www.npmjs.com/package/react-hooks-in-callback) library to use dipatch, store, history, etc... directly in your request callback body.)
+(_you can use [react-hooks-in-callback](https://www.npmjs.com/package/react-hooks-in-callback) library to use dipatch, store, history, etc... directly in your request callback body._)
 
-now we have defined our requests callbacks, we can now bind them to the manager using **createManager** imported from _react-requests-manager_.
+after defining requests logic, we should bind them to the manager using **createRequests** and **createManager** imported from _react-requests-manager_.
 
 let's then implement it in the **requests-manager/index.ts** file as follows
 
@@ -216,7 +147,7 @@ export const $user = createManager('USER', userRC)
 
 ## usage in the component
 
-now we have the **$user** requests manager, we can use it in the component. let's see how!
+now we can use the requests manager (**$user**) in the component as follows!
 
 ```ts
 import React from 'react'
@@ -224,6 +155,8 @@ import { $user } from '../requests-manager'
 
 const MyComponent: React.FC<{ userId: string }> = (props) => {
   ...
+  // we can use a selector to get a request state or to return another value depending on the context state.
+  // in this case we will just take the fetchUser request state
   const fetchUserState = $user.useRequests((reqs: Requests) => reqs.fetchUser)
   // fetchUserState = { isProcessing, error: any, details: Details }
   // details = { processes: Dictionary<ProcessState>, count }
@@ -263,6 +196,72 @@ const MyComponent: React.FC<{ userId: string }> = (props) => {
 ```
 
 you can see a working example [here](https://codesandbox.io/s/requests-manager-1-9gv5h)
+
+## utils.start
+
+if you are familiar with redux-thunk, you probably know that before sending a request to the server, you should dispatch a requestStart to the redux store, so utils.start works at the same way.
+
+```ts
+utils.start();
+// your process state will turn to process.status = "processing"
+...
+// if you have update to do on start, you can pass a callback
+utils.start(function onStart(){
+  // dispatch to redux
+  // utils.clearError(  )
+})
+```
+
+## utils.inQueue (only for Queue type wrapper)
+
+```ts
+await utils.inQueue(function onStart() {
+  // on start logic
+})
+```
+
+## utils.finish
+
+when you have the server response you will probably need to dispatch it your application state manager (redux for example), this is the place to do so.
+
+```ts
+type StatusData =
+  | ProcessStatus
+  | {
+      status: ProcessStatus
+      error?: any
+      metadata: Dictionary<any>
+    }
+utils.finish(FinishData)
+
+const status: StatusData = 'success'
+// questo equivale a
+utils.finish(status, () => {
+  // this callback is optional
+  // dispatch to your application state manager
+})
+
+// the error value will be passed to the request Error value
+// while the status will be only for the process.
+utils.finish({
+  status: 'error',
+  error: {
+    pippo: '404 not found',
+    pluto: '500 server error'
+  }
+})
+```
+
+## utils.cancel
+
+after some verifications, if the process is not eligible to stay alive, you can cancel it inside the request body using exclusively the utils.cancel helper.
+a special case, if you did not call utils.start yet, you can return false to cancel the process
+
+## utils.onAbort
+
+## utils.abortPrevious
+
+## utils.getProcessState vs utils.getRequestState
 
 # abort
 
