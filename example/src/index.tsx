@@ -10,7 +10,9 @@ import { $$ } from './RequestsManager'
 
 const initialState = { title: 'title', users: [] }
 export const APP_STORE: Store<State, any> = createStore(reducer, initialState)
-export const useMixedSelectors = $$.bindToStateManager(APP_STORE)
+export const { useSelector: useMixedSelectors } = $$.bindToStateManager(
+  APP_STORE
+)
 const Root = React.memo((props) => {
   return (
     <Provider store={APP_STORE}>

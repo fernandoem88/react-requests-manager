@@ -11,7 +11,8 @@ import {
   ProcessDispatcher,
   Action,
   ActionType,
-  ActionPayload
+  ActionPayload,
+  RequestUtilsCommon
 } from 'types'
 import { defaultProcessDispatcher } from './store'
 
@@ -312,6 +313,30 @@ const getHelpers = (store: Store, contextId: string) => {
     })
   }
 
+  const handleRequestErrors = async (
+    requestUtils: RequestUtilsCommon<any>,
+    promise: Promise<void | false>
+  ) => {
+    // const processId = requestUtils.getProcessState().id
+    // if (!processId) return
+    if (!promise) {
+      return
+    }
+    try {
+      const result = await promise
+      if (result === false) {
+        try {
+          requestUtils.cancel.bind({ skipDispatch: true })()
+        } catch (error) {}
+      }
+    } catch (error) {
+      if (error?.message === 'ON_CANCEL') {
+        return
+      }
+      throw error
+    }
+  }
+
   /**
    *
    * @param requestName
@@ -399,7 +424,10 @@ const getHelpers = (store: Store, contextId: string) => {
   }
 
   // after state changed: Post processing
-  const postProcess = <K extends ActionType>({ type, payload }: Action<K>) => {
+  const onBeforeDispatch = <K extends ActionType>({
+    type,
+    payload
+  }: Action<K>) => {
     switch (type) {
       case 'ON_RESET_REQUEST': {
         // const pl = payload as ActionPayload['ON_FINISH']
@@ -460,7 +488,7 @@ const getHelpers = (store: Store, contextId: string) => {
     skipDispatch?: boolean
   ) => {
     const subscribersCount = getSubscribersCount()
-    postProcess({ type, payload })
+    onBeforeDispatch({ type, payload })
     setShouldDispatch(true)
     setTimeout(() => {
       // using canDispatch value to dispatch only once,
@@ -516,7 +544,8 @@ const getHelpers = (store: Store, contextId: string) => {
     getDispatcher,
     addAbortInfo,
     resetRequest,
-    doAbortGroup
+    doAbortGroup,
+    handleRequestErrors
   }
 }
 

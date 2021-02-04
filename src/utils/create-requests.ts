@@ -277,7 +277,7 @@ const createRequests = () => <
           store
         }) as typeof requestCreator
         const promise = __requestCreator__(requestUtils, params)
-        handleRequestErrors(process.id, promise, requestUtils.cancel)
+        helpers.handleRequestErrors(requestUtils, promise)
         const { status } = helpers.getProcessInfo(requestName, process.id)
 
         if (status === 'created' || status === 'cancelled') {
@@ -294,30 +294,6 @@ const createRequests = () => <
         }
 
         return process.id
-      }
-    }
-
-    const handleRequestErrors = async (
-      processId: string,
-      promise: Promise<void | false>,
-      cancel: RequestUtils<any>['cancel']
-    ) => {
-      if (!processId) return
-      if (!promise) {
-        return
-      }
-      try {
-        const result = await promise
-        if (result === false) {
-          try {
-            cancel.bind({ skipDispatch: true })()
-          } catch (error) {}
-        }
-      } catch (error) {
-        if (error?.message === 'ON_CANCEL') {
-          return
-        }
-        throw error
       }
     }
 

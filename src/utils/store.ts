@@ -8,11 +8,7 @@ const createStore = () => {
   const id = uniqid('StoreId__')
   const store: Store = {
     id,
-    contexts: {},
-    dispatchers: {
-      $redux: new Subject(),
-      $actions: new Subject()
-    }
+    contexts: {}
   }
   // *************** \\
   // *** getters *** \\

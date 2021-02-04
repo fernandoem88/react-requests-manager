@@ -193,24 +193,14 @@ const createContext = () => <
       }, [])
       return selectedValueRef.current.value
     }
-    // const createNamedSelectorHook = <Selectors extends Record<any, any>>(
-    //   selectors: Selectors
-    // ) => {
-    //   const useNamedSelector = <Key extends keyof Selectors>(key: Key) => {
-    //     return selectors[key]
-    //   }
-    //   return useNamedSelector
-    // }
-    // const createSelectorHook = () => useSelector
-    return useSelector // { createSelectorHook, createNamedSelectorHook }
+
+    return { useSelector } // { createSelectorHook, createNamedSelectorHook }
   }
 
   return {
     requests: requests as Requests,
     extraActions: actions as ExtraActions,
-    // hooks
     useRequests,
-    // helpers
     getState: getRequestsState,
     bindToStateManager
   }

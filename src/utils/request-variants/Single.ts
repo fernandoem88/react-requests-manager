@@ -5,6 +5,7 @@ import {
   Request,
   RequestWithNoParams
 } from 'types'
+import getHelpers from '../helpers'
 
 export default () =>
   function Single<
@@ -32,19 +33,8 @@ export default () =>
       }
 
       const prom = request(utils, params[0] as Params)
-      // handle cancel
-      prom
-        .then((result) => {
-          if (result === false) {
-            utils.cancel.bind({ skipDispatch: true })()
-          }
-        })
-        .catch((err) => {
-          if (err?.message === 'ON_CANCEL') {
-            return
-          }
-          throw err
-        })
+      const helepers = getHelpers(store, contextId)
+      helepers.handleRequestErrors(utils, prom)
     } as Get2ndParams<SingleRequest> extends []
       ? RequestWithNoParams
       : Request<Get2ndParams<SingleRequest>[0]>

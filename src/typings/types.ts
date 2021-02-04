@@ -222,10 +222,6 @@ declare module 'types' {
       }>
       shouldDispatch?: boolean
     }>
-    // dispatchers: {
-    //   $redux: Subject<any>
-    //   $actions: Subject<any>
-    // }
   }
 
   // ******* ******* ******* \\

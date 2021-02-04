@@ -171,10 +171,11 @@ const createContextsGroup = () => <
       const selectorRef = useRef(selector)
       selectorRef.current = selector
       const [initialCombined] = useState(getCombinedState)
+      const [initialSelectedValue] = useState(() =>
+        copy(selector(initialCombined.state, initialCombined.requests, params))
+      )
       const selectedValueRef = useRef({
-        value: copy(
-          selector(initialCombined.state, initialCombined.requests, params)
-        ) as ReturnType<Selector>
+        value: initialSelectedValue as ReturnType<Selector>
       })
       const paramsRef = useShallowEqualRef(params)
 
@@ -231,16 +232,8 @@ const createContextsGroup = () => <
       }, [])
       return selectedValueRef.current.value
     }
-    // const createNamedSelectorHook = <Selectors extends Record<any, any>>(
-    //   selectors: Selectors
-    // ) => {
-    //   const useNamedSelector = <Key extends keyof Selectors>(key: Key) => {
-    //     return selectors[key]
-    //   }
-    //   return useNamedSelector
-    // }
-    // const createSelectorHook = () => useSelector
-    return useSelector // { createSelectorHook, createNamedSelectorHook }
+
+    return { useSelector } // { useSelector, createNamedSelectorHook }
   }
 
   return {
