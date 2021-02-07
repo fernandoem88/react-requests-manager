@@ -1,4 +1,4 @@
-import { configsUtils } from '../configs'
+import { configsUtils } from '../../configs'
 import { useDispatch } from 'react-redux'
 import uniqid from 'uniqid'
 import { ActionType } from '.'

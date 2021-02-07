@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import uniqid from 'uniqid'
 
 import {
@@ -11,18 +11,19 @@ import {
   AddProcess
 } from './styled'
 
-import { $$ } from '../../RequestsManager'
+import { $$ } from '../../store/RequestsManager'
 import ProcessItem from '../ProcessItem'
 
 interface Props {
-  // requestName: keyof typeof $$.requests
   duration?: number
 }
 
 const labels = {
-  fetchUser: 'single type',
-  postComment: 'multi type',
-  fetchImage: 'queue type'
+  login: 'login (ignore new processes)',
+  pagination: 'pagination (abort previous)',
+  fetchUser: 'fetch user (commit only one)',
+  postComment: 'post comment (multi commits)',
+  fetchImage: 'fetch Image (queue)'
 }
 
 const requestsList = Object.entries($$.requests).map(([key]) => {
@@ -35,10 +36,8 @@ const RequestItem: React.FC<Props> = (props) => {
   const [requestName, setRequestName] = useState<keyof typeof $$.requests>(
     requestsList[0].key as any
   )
-
-  const req = $$.useRequests((reqs) => reqs[requestName])
-  const [version, setVersion] = useState('')
   const [ids, setIds] = useState<string[]>([])
+  const req = $$.useRequests((reqs) => reqs[requestName])
 
   const canReset = !req.isProcessing && req.details.count.total > 0
 
@@ -64,11 +63,6 @@ const RequestItem: React.FC<Props> = (props) => {
     : canReset
     ? 'reset'
     : ''
-  useEffect(() => {
-    if (req.isProcessing) {
-      setVersion(uniqid())
-    }
-  }, [req.isProcessing])
 
   return (
     <Root>
@@ -98,7 +92,6 @@ const RequestItem: React.FC<Props> = (props) => {
             requestName={requestName as any}
             index={index}
             duration={props.duration}
-            version={version}
           />
         ))}
       </div>

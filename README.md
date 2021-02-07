@@ -1,6 +1,9 @@
 # react-requests-manager
 
-> have a full control on your async actions
+> this package will help you to
+
+- have a full control on your async actions
+- separate async actions' state to your application data state
 
 [![NPM](https://img.shields.io/npm/v/react-requests-manager.svg)](https://www.npmjs.com/package/react-requests-manager) [![JavaScript Style Guide](https://img.shields.io/badge/code_style-standard-brightgreen.svg)](https://standardjs.com)
 
@@ -8,6 +11,103 @@
 
 ```bash
 npm install --save react-requests-manager
+```
+
+# Common way vs Request manager way
+
+Currently, the common way to manage your async actions is to define a _redux-thunk_ action and dispatch each of its state to _redux_.
+
+this implies 3 points
+
+- for each action, we should add 2 states to the redux store (_processing_ and _error_) and have at least 3 cases in our reducer (eg: _start_, _success_ and _failure_ ).
+- a lil bit tricky to abort our requests processes
+- we have only one processing type, that's is a linear one: start processing and finish with success or error. if we want for example to process requests in a queue, we should implement it by ourselves or using another library
+
+let's see a simple example
+
+```ts
+// defining fetchUsers async action to fetch users from db
+const fetchUsers = (dispatch: Dispatch) => async (userIds: string[]) => {
+  ...
+  dispatch({ type: "FETCH_USERS_START" })
+  ...
+  try {
+    const users = await api.getUsers(userIds).send()
+    dispatch({ type: "FETCH_USERS_SUCCESS", payload: users })
+  } catch (error) {
+    dispatch({ type: "FETCH_USERS_FAILURE", payload: error })
+  }
+}
+
+// in the reducer side
+
+// application state
+const initialState = {
+  users: [],
+  isFetchingUsers: false,
+  usersError: null
+}
+
+// reducer definition
+const usersReducer = (state = initialState, { type, payload }) => {
+  switch (type) {
+
+    case "FETCH_USERS_START":
+      return { ...state, isFetchingUsers: true, usersError: null };
+
+    case "FETCH_USERS_SUCCESS":
+      return { ...state, usersError: null, isFetchingUsers: false, users: payload.users };
+
+    case "FETCH_USERS_FAILURE":
+      return { ...state, usersError: payload.error, isFetchingUsers: false };
+
+    default: return state
+  }
+}
+```
+
+using the _requests-manager_ approach will
+
+- keep your redux-state clean and because all states are managed by the library
+- let you have a total control of all processes for all requests
+- change processing types in a simple way using **requests wrapper**: Queue, Multi and Single
+
+```ts
+import { Single, Queue, Multi } from "react-requests-manager"
+
+// defining fetchUsers async action to fetch users from db
+const fetchUsers = Single(async (utils: RequestUtils<any>, userIds: string[]) => {
+  ...
+  // dispatch({ type: "FETCH_USERS_START" })
+  utils.start()
+  ...
+  try {
+    const users = await api.getUsers(userIds).send()
+    // dispatch({ type: "FETCH_USERS_SUCCESS", payload: users })
+    utils.finish({ status: "success" }, () => {
+      dispatch({ type: "SET_USERS", payload: users })
+    })
+  } catch (error) {
+    // dispatch({ type: "FETCH_USERS_FAILURE", payload: error })
+    utils.finish({ status: "error", error })
+  }
+})
+
+// in the reducer side
+
+// application state
+const initialState = {
+  users: [],
+}
+
+// reducer definition
+const usersReducer = (state = initialState, { type, payload }) => {
+  switch (type) {
+    case "SET_USERS":
+      return { ...state, users: payload.users };
+    default: return state
+  }
+}
 ```
 
 # Request types: (**Single**, **Multi**, **Queue**)
@@ -96,7 +196,7 @@ export const fetchImage = Queue(async (utils, image: Image) => {
 })
 
 // Multi: all processes will eventually reach "utils.finish" (success or error) if no one abort/cancel them
-export const postComment = Multi(async (utils, comment: { id: string }) => {
+export const deleteComment = Multi(async (utils, comment: { id: string }) => {
   // in this example, utils will be of type RequestUtils<{ id: string }>
   // the request body is the same as in the case of Single Request Type
   utils.start()
@@ -124,7 +224,7 @@ let's then implement it in the **requests-manager/index.ts** file as follows
 ```ts
 import { createRequests, createManager } from 'react-requests-manager'
 import * as REQS from './requests'
-// REQS = { fetchUser, fetchImage, postComment }
+// REQS = { fetchUser, fetchImage, deleteComment }
 
 // userRC: user requests configurator: helper that allows us to bind the requests to the requests manager
 export const userRC = createRequests(REQS, {

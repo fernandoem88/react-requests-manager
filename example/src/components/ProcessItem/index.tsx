@@ -9,7 +9,6 @@ interface Props {
   duration?: number
   requestName: keyof typeof $$.requests
   index: number
-  version: string
 }
 const RequestItem: React.FC<Props> = React.memo((props) => {
   const { requestName } = props
