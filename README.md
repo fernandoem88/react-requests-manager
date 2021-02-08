@@ -13,7 +13,7 @@
 npm install --save react-requests-manager
 ```
 
-# Common way vs Request manager way
+# Common way vs Requests-manager way
 
 Currently, the common way to manage your async actions is to define a _redux-thunk_ action and dispatch each of its state to _redux_.
 
@@ -77,14 +77,17 @@ const usersReducer = (state = initialState, { type, payload }) => {
 }
 ```
 
-using the _requests-manager_ approach will
+instead, using the _requests-manager_ approach will
 
-- keep your redux-state clean because all requests (_async actions_) states are managed by the library
-- let you have a full control of all processes for every async actions
-- give you a simple way to change request/processing type using **requests type wrapper**: Queue, Multi and Single
+- keep our redux-state clean because all requests (_async actions_) states are managed by the library
+- let us have a full control of all processes for every async actions
+- give us a simple way to change request/processing type using **request type wrappers**: Queue, Multi and Single
+
+let's see a simple illustration
 
 ```ts
 import { Single } from "react-requests-manager"
+// Single is a request type wrapper
 
 // defining fetchUsers async action to fetch users from db
 const fetchUsers = Single(async (utils: RequestUtils<any>, userIds: string[]) => {
@@ -105,7 +108,8 @@ const fetchUsers = Single(async (utils: RequestUtils<any>, userIds: string[]) =>
 })
 ```
 
-until now we can notice that the action's implementation in this approach is quiet similar to the redux-thunk one.
+even if the action implementation in this approach is quiet similar to the redux-thunk one. there are some benefits this approach will bring as we will see further!
+
 let's now see what changes in the reducer side!
 
 ```ts
