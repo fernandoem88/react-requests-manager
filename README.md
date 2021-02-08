@@ -3,7 +3,7 @@
 > this package will help you to
 
 - have a full control on your async actions
-- separate async actions' state to your application data state
+- separate async actions state to your application data state
 
 [![NPM](https://img.shields.io/npm/v/react-requests-manager.svg)](https://www.npmjs.com/package/react-requests-manager)
 
@@ -22,7 +22,7 @@ Since we will talk a lot about _requests_ and _processes_, let's then clarify th
 
 For example if we define a _fetchUsers_ request, every time we will call it in our project, the manager will create a new process, and each process state will have an impact to the final request state.
 
-You can already check a working example [here](https://codesandbox.io/s/requests-manager-1-9gv5h)
+> **if you are curious, You can already check a working example [here](https://codesandbox.io/s/requests-manager-1-9gv5h)**
 
 ## Motivations (common approach)
 
@@ -93,7 +93,7 @@ const usersReducer = (state = initialState, { type, payload }) => {
 Instead, if we decide to use the _requests-manager_ approach, it will help us to:
 
 - keep our redux-state clean because all _requests_ states are managed by the library
-- have a full control of all _processes_ for every _request_
+- have a full control of all _processes_ for every _request_: we have access to each single process, and we can decide to abort them, or not start a new one depending on the global request state!
 - change easily the _request_ processing type using **request type wrappers** (_Queue_, _Multi_ and _Single_)
 
 let's see a simple illustration
@@ -141,7 +141,7 @@ const usersReducer = (state = initialState, { type, payload }) => {
 }
 ```
 
-Here, we can clearly see how the reducer side is clean, and this will be the same for every **Request** we will define in our application.
+Here, we can clearly see how the reducer side is clean, and this will be the same for every **Request** we will define in our application. we don't have to care about requests anymore in our reducers!
 
 The access to the _requests_ state is kept simple and easy using the **useRequests** hook that accepts a _selector function_ to pick a determined state from the _requests record_ (**reqs**).
 
