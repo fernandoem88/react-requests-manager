@@ -22,9 +22,9 @@ Since we will talk a lot about _requests_ and _processes_, let's then clarify th
 
 For example if we define a _fetchUsers_ request, every time we will call it in our project, the manager will create a new process, and each process state will have an impact to the final request state.
 
-# Common approach vs Requests-manager approach
+You can already check a working example [here](https://codesandbox.io/s/requests-manager-1-9gv5h)
 
-## common approach
+## Motivations (common approach)
 
 Currently, the common way to manage our async actions is to define a _redux-thunk_ action and dispatch each of its state to the _redux_ store.
 
@@ -88,7 +88,7 @@ const usersReducer = (state = initialState, { type, payload }) => {
 }
 ```
 
-## requests-manager approach
+## Solution (requests-manager approach)
 
 Instead, if we decide to use the _requests-manager_ approach, it will help us to:
 
@@ -145,31 +145,14 @@ Here, we can clearly see how the reducer side is clean, and this will be the sam
 
 The access to the _requests_ state is kept simple and easy using the **useRequests** hook that accepts a _selector function_ to pick a determined state from the _requests record_ (**reqs**).
 
-let's see and compare both approaches.
-
 ```ts
-// access requests and application state in the standard and common way
-import { useSelector } from "react-redux"
+import { $users } from "./store/async/users"
+// $users is the requests manager for users entity. we'll see later how to define it!
 
-const MyComponent = () => {
-  // data
-  const users = useSelector(state => state.users)
-  // requests
-  const isFetchingUsers = useSelector(state => state.isFetchingUsers)
-  const fetchUsersError = useSelector(state => state.fetchUsersError)
-  ...
-}
-
-
-// access requests and application state using requests-manager approach
-import { useSelector } from "react-redux"
-
-// $users is the users requests manager and we'll see later how to define it!
 const { useRequests } = $users
 
 const MyComponent = () => {
   // data
-  const users = useSelector(state => state.users)
   // requests
   const isFetchingUsers = useRequests(reqs => reqs.fetchUsers.isProcessing)
   const fetchUsersError = useRequests(reqs => reqs.fetchUsers.error)
@@ -746,11 +729,19 @@ await utils.inQueue(function onStart() {
 
 # Action utils
 
+// todo
+
 ## utils.abort
+
+// todo
 
 ## utils.resetRequest
 
+// todo
+
 ## utils.clearErrors
+
+// todo
 
 # Bind to state manager
 
@@ -774,7 +765,9 @@ export const { useSelector: useStoreAndReqs2 } = $$.bindToStateManager(store)
 // useStoreAndReqs: (selector: (state: AppState, reqs: Requests) => R) => R
 ```
 
-# selectors
+## selectors
+
+// todo
 
 ## see also
 
