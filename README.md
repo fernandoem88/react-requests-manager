@@ -13,6 +13,15 @@
 npm install --save react-requests-manager
 ```
 
+## Request vs Process
+
+Since we will talk a lot about _requests_ and _processes_, let's then clarify the concept for an easy comprehension.
+
+- a **request** is an action where async tasks will be defined
+- a **process** is just an instance of a given request (we can have many processes of the same request running at the same time in our application)
+
+for example if we define a _fetchUsers_ request, every time we will call it in our project, the manager will create a new process of the request. Each process state will have an impact to the final request state.
+
 # Common way vs Requests-manager way
 
 Currently, the common way to manage your async actions is to define a _redux-thunk_ action and dispatch each of its state to _redux_.
@@ -89,7 +98,7 @@ let's see a simple illustration
 
 
 // defining fetchUsers async action to fetch users from db
-const fetchUsers = async (utils: RequestUtils<any>, userIds: string[]) => {
+const fetchUsers = async (utils: RequestUtils<string[]>, userIds: string[]) => {
   ...
   // dispatch({ type: "FETCH_USERS_START" })
   utils.start()
@@ -184,9 +193,9 @@ const fetchUsers = async (utils: RequestUtils<any>, userIds: string[]) => {
 }
 ```
 
-last benefit is the _request type_ wrappers that allows you to have different approach on your async action depending on your needs and requirements.
+Last benefit is the _request type_ wrappers that allows you to have different approach on your async action depending on your needs and requirements.
 
-# Request type wrapper: (**Single**, **Multi**, **Queue**)
+# Request type wrappers
 
 - **Single**: (default behaviour) only one process can finish (_success_ or _error_), and the remaining ones will automatically _abort_
 
@@ -211,13 +220,6 @@ const fetchData = Single(async (utils, params: Params) => {
 
 - **utils**: first parameter of the **request callback** and a provided utilities object that will let you manage your request state.
 - **params**: (optional) the parameter you will probably pass to the final request when you will use it in your components.
-
-## Request vs Process
-
-- a request is an action where async tasks will be defined
-- a process is just an instance of a given request (we can have many processes of the same request running at the same time in our application)
-
-for example if we define a _fetchUsers_ request, every time we will call it in our project, the manager will create a new process of the request. Each process state will have an impact to the final request state. the _request utils_ object has access to the store and will help to define properly the _process state_ and at the same time, the _request state_.
 
 Let's see now how we will effectively use the **react-requests-manager** library, step by step, in our projects.
 
@@ -450,17 +452,20 @@ in this case we should use **createGroupManager**
 let's imagine to have this structure
 
 ```txt
-...|
-    -- async |
-              -- index.ts
-              -- users |
-                        -- requests.ts
-                        -- actions.ts
-                        -- index.ts
-              -- media |
-                        -- requests.ts
-                        -- actions.ts
-                        -- index.ts
+store|
+      -- index.ts
+      -- users |
+                -- reducers //
+                -- async |
+                          -- requests.ts
+                          -- actions.ts
+                          -- index.ts
+      -- media |
+                -- reducers //
+                -- async |
+                          -- requests.ts
+                          -- actions.ts
+                          -- index.ts
 
 ```
 
@@ -483,8 +488,8 @@ then we can combine the _usersRC_ and the _mediaRC_ like follows
 ```ts
 import { createGroupManager } from 'react-requests-manager'
 
-import { usersRC } from './users'
-import { mediaRC } from './media'
+import { usersRC } from './users/async'
+import { mediaRC } from './media/async'
 
 // $$: is the "requests manager's group" and contains all related helpfull utilities.
 
