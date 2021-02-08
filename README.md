@@ -5,7 +5,7 @@
 - have a full control on your async actions
 - separate async actions' state to your application data state
 
-[![NPM](https://img.shields.io/npm/v/react-requests-manager.svg)](https://www.npmjs.com/package/react-requests-manager) [![JavaScript Style Guide](https://img.shields.io/badge/code_style-standard-brightgreen.svg)](https://standardjs.com)
+[![NPM](https://img.shields.io/npm/v/react-requests-manager.svg)](https://www.npmjs.com/package/react-requests-manager)
 
 ## Install
 
@@ -143,14 +143,14 @@ const usersReducer = (state = initialState, { type, payload }) => {
 
 Here, we can clearly see how the reducer side is clean, and this will be the same for every **Request** we will define in our application.
 
-The access to the _requests_ state is kept simple and easy using the _useRequests_ hook that accepts a _selector function_ to pick a determined state from the _requests record (reqs)_.
-Each _key_ from _reqs_ is an object with the following type _RequestState<any>_ that reflect the _respective request state_.
+The access to the _requests_ state is kept simple and easy using the **useRequests** hook that accepts a _selector function_ to pick a determined state from the _requests record_ (**reqs**).
 
 let's see and compare both approaches.
 
 ```ts
-import { useSelector } from "react-redux"
 // access requests and application state in the standard and common way
+import { useSelector } from "react-redux"
+
 const MyComponent = () => {
   // data
   const users = useSelector(state => state.users)
@@ -161,11 +161,12 @@ const MyComponent = () => {
 }
 
 
+// access requests and application state using requests-manager approach
 import { useSelector } from "react-redux"
 
 // $users is the users requests manager and we'll see later how to define it!
 const { useRequests } = $users
-// access requests and application state using requests-manager approach
+
 const MyComponent = () => {
   // data
   const users = useSelector(state => state.users)
@@ -774,6 +775,12 @@ export const { useSelector: useStoreAndReqs2 } = $$.bindToStateManager(store)
 ```
 
 # selectors
+
+## see also
+
+- [react-hooks-in-callback](https://www.npmjs.com/package/react-hooks-in-callback): a package that will help you to remove undesired rerenders using hooks in callback
+
+- [react-redux-selector-utils](https://www.npmjs.com/package/react-redux-selector-utils): a package that will help you to define and use in a **clean**, **easy** and **fast** way your redux selectors
 
 ## License
 
