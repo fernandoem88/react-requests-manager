@@ -3,4 +3,4 @@ import * as requests from './requests'
 import * as extraACtions from './actions'
 
 const configurator = createRequests(requests, extraACtions)
-export const $$ = createManager('TEST', configurator)
+export const $user = createManager('TEST', configurator)

@@ -1,7 +1,7 @@
 import React from 'react'
 import { createContext } from 'react-hooks-in-callback'
 import { useReducer } from 'react'
-import { ActionType } from '../reducers'
+import { ActionType } from '../store/reducers'
 export type Item = { id: string }
 export type State = {
   title: string

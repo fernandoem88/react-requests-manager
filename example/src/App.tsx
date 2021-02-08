@@ -2,10 +2,11 @@ import React from 'react'
 import RequestItem from './components/RequestItem'
 
 import { useStoreAndRequests } from './index'
-import Todo from './components/ProcessItem/User'
+import Todo from './components/User'
+import { State } from './store/reducers'
 
 const App = React.memo(() => {
-  const users = useStoreAndRequests((state) => {
+  const users = useStoreAndRequests((state: State) => {
     return state.users
   })
   return (

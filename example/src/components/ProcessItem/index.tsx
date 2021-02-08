@@ -2,12 +2,12 @@ import React, { useEffect, useState } from 'react'
 import ReactSlider from 'react-slider'
 
 import { Root, SliderWrapper, ThumbLabel, Btn } from './styled'
-import { $$ } from '../../RequestsManager'
+import { $user } from '../../store/async'
 import { getRandomNumber } from '../../configs'
 
 interface Props {
   duration?: number
-  requestName: keyof typeof $$.requests
+  requestName: keyof typeof $user.requests
   index: number
 }
 const RequestItem: React.FC<Props> = React.memo((props) => {
@@ -16,7 +16,7 @@ const RequestItem: React.FC<Props> = React.memo((props) => {
   const [processId, setProcessId] = useState<string>()
   const [value, setValue] = useState(0)
 
-  const process = $$.useRequests((reqs) => {
+  const process = $user.useRequests((reqs) => {
     const { details } = reqs[requestName]
     if (!processId) return undefined
     return details.processes[processId]
@@ -63,7 +63,7 @@ const RequestItem: React.FC<Props> = React.memo((props) => {
   const processingStatus = process?.status
 
   const handleStart = () => {
-    const pcssId = $$.requests[requestName]({
+    const pcssId = $user.requests[requestName]({
       delay: duration,
       index: props.index
     })
@@ -73,7 +73,7 @@ const RequestItem: React.FC<Props> = React.memo((props) => {
 
   const handleAbort = () => {
     if (process) {
-      $$.extraActions.abort({
+      $user.extraActions.abort({
         requestName: process.requestName as any,
         id: process.id
       })

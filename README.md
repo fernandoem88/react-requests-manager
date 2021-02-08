@@ -23,7 +23,7 @@ this implies 3 points
 - a lil bit tricky to abort our requests processes
 - we have only one processing type, that's is a linear one: start processing and finish with success or error. if we want for example to process requests in a queue, we should implement it by ourselves or using another library
 
-let's see a simple example
+let's see a simple example of a redux-thunk action
 
 ```ts
 // defining fetchUsers async action to fetch users from db
@@ -38,30 +38,41 @@ const fetchUsers = (dispatch: Dispatch) => async (userIds: string[]) => {
     dispatch({ type: "FETCH_USERS_FAILURE", payload: error })
   }
 }
+```
 
-// in the reducer side
+and its respective implementation in the reducer side
 
+```ts
 // application state
 const initialState = {
   users: [],
   isFetchingUsers: false,
-  usersError: null
+  fetchUsersError: null
 }
 
 // reducer definition
 const usersReducer = (state = initialState, { type, payload }) => {
   switch (type) {
+    case 'FETCH_USERS_START':
+      return { ...state, isFetchingUsers: true, fetchUsersError: null }
 
-    case "FETCH_USERS_START":
-      return { ...state, isFetchingUsers: true, usersError: null };
+    case 'FETCH_USERS_SUCCESS':
+      return {
+        ...state,
+        fetchUsersError: null,
+        isFetchingUsers: false,
+        users: payload.users
+      }
 
-    case "FETCH_USERS_SUCCESS":
-      return { ...state, usersError: null, isFetchingUsers: false, users: payload.users };
+    case 'FETCH_USERS_FAILURE':
+      return {
+        ...state,
+        fetchUsersError: payload.error,
+        isFetchingUsers: false
+      }
 
-    case "FETCH_USERS_FAILURE":
-      return { ...state, usersError: payload.error, isFetchingUsers: false };
-
-    default: return state
+    default:
+      return state
   }
 }
 ```
@@ -89,28 +100,92 @@ const fetchUsers = Single(async (utils: RequestUtils<any>, userIds: string[]) =>
     })
   } catch (error) {
     // dispatch({ type: "FETCH_USERS_FAILURE", payload: error })
-    utils.finish({ status: "error", error })
+    utils.finish({ status: "error", error }) // we dont dispatch error to the reducer
   }
 })
+```
 
-// in the reducer side
+until now we can say that the action implementation in this approach is quiet similar to the redux-thunk one. let's now see what changes in the reducer side!
 
+```ts
 // application state
 const initialState = {
-  users: [],
+  users: [] // only the main data in our application state
 }
 
 // reducer definition
 const usersReducer = (state = initialState, { type, payload }) => {
   switch (type) {
-    case "SET_USERS":
-      return { ...state, users: payload.users };
-    default: return state
+    // we just have to handle the case of setting the data because
+    // the processing state and the error state are handled by the requests manager
+    case 'SET_USERS':
+      return { ...state, users: payload.users }
+    default:
+      return state
   }
 }
 ```
 
-# Request types: (**Single**, **Multi**, **Queue**)
+here, we can clearly see, the reducer side is clean, and this will be the case for every async action we will define in our application.
+
+The access to the requests state is kept simple and easy using the _useRequests_ hook that accepts a _selector function_ to pick a determined state from the _requests record (reqs)_. Each _key_ from _reqs_ is an object with the following signature { _isProcessing: boolean_, _error: any_, _details: RequestDetails_ } that reflect the respective request state.
+
+let's see and compare this approach to the standard one.
+
+```ts
+
+// access requests and application state in the standard and common way
+const MyComponent = () => {
+
+  // data
+  const users = useSelector(state => state.users)
+  // requests
+  const isFetchingUsers = useSelector(state => state.isFetchingUsers)
+  const fetchUsersError = useSelector(state => state.fetchUsersError)
+  ...
+}
+
+
+// access requests and application state using requests-manager approach
+const MyComponent = () => {
+  // data
+  const users = useSelector(state => state.users)
+  // requests
+  const isFetchingUsers = useRequests(reqs => reqs.fetchUsers.isProcessing)
+  const fetchUsersError = useRequests(reqs => reqs.fetchUsers.error)
+  ...
+}
+```
+
+We saw the benefit in the _reducer state_ side, but another one is that aborting a process is made easy in this library.
+
+this is how we should change _fetchUsers_ action to tell the manager how to abort concretly the request: passing the _abort function_ to _utils.onAbort_ callback.
+
+```ts
+import { Single, Queue, Multi } from "react-requests-manager"
+
+// defining fetchUsers async action to fetch users from db
+const fetchUsers = Single(async (utils: RequestUtils<any>, userIds: string[]) => {
+  ...
+  utils.start()
+  const req = api.getUsers(userIds)
+  utils.onAbort(() => {
+    // here is where we will abort concretely the request sent to the server
+    req.abort()
+  })
+  ...
+  try {
+    const users = await req.send() // here we send the request to the server
+    ...
+  } catch (error) {
+    ...
+  }
+})
+```
+
+last benefit is the _request type_ wrappers that allows you to have different approach on your async action depending on your needs and requirements.
+
+# Request type wrapper: (**Single**, **Multi**, **Queue**)
 
 - **Single**: only one process can finish (success or error), and the remaining ones will automatically abort
 
@@ -150,22 +225,22 @@ we can see a more detailed example, creating a **requests-manager/requests.ts** 
 import { Single, Multi, Queue } from 'react-requests-manager'
 
 // Single: once a process calls utils.finish, others will abort
-export const fetchUser = Single(async (utils, userId: string) => {
+export const fetchUsers = Single(async (utils, userId: string) => {
   // in this example, utils will be of type RequestUtils<string>
   utils.start(function onStart() {
     // on success logic: optional
   })
   // you should replace this with a working example
-  const xhqr = API.getUser(userId)
+  const req = API.getUser(userId)
   utils.onAbort(function abort() {
     // how will you abort your request if some one triggers an abort action
-    xhqr.abort()
+    req.abort()
   })
   try {
-    const result = await xhqr.send()
+    const result = await req.send()
     utils.finish('success', function onSuccess() {
       // on success logic: optional
-      dispath({ type: 'add_user', payload: result })
+      dispath({ type: 'ADD_USERS', payload: result })
     })
   } catch (error) {
     utils.finish({ status: 'error', error }, function onError() {
@@ -182,13 +257,13 @@ export const fetchImage = Queue(async (utils, image: Image) => {
     // on start logic: optional
   })
   // you should replace this with a working example
-  const xhqr = API.fetchImage(image)
+  const req = API.fetchImage(image)
   utils.onAbort(function abort(){
     // abort logic
-    xhqr.abort()
+    req.abort()
   })
   try {
-    await xhqr.send()
+    await req.send()
     utils.finish("success")
   } catch () {
     utils.finish("error")
@@ -224,7 +299,7 @@ let's then implement it in the **requests-manager/index.ts** file as follows
 ```ts
 import { createRequests, createManager } from 'react-requests-manager'
 import * as REQS from './requests'
-// REQS = { fetchUser, fetchImage, deleteComment }
+// REQS = { fetchUsers, fetchImage, deleteComment }
 
 // userRC: user requests configurator: helper that allows us to bind the requests to the requests manager
 export const userRC = createRequests(REQS, {
@@ -258,31 +333,31 @@ const MyComponent: React.FC<{ userId: string }> = (props) => {
   ...
   // we can use a selector to get a request state or to return another value depending on the context state.
   // in this case we will just take the fetchUser request state
-  const fetchUserState = $user.useRequests((reqs: Requests) => reqs.fetchUser)
-  // fetchUserState = { isProcessing, error: any, details: Details }
+  const fetchUsersState = $user.useRequests((reqs: Requests) => reqs.fetchUsers)
+  // fetchUsersState = { isProcessing, error: any, details: Details }
   // details = { processes: Dictionary<ProcessState>, count }
   // count = Record<processing | suspended | cancelled | aborted  | success | error | total, number>
   ...
-  const label = fetchUserState.isProcessing ? 'fetching user...' : ''
+  const label = fetchUsersState.isProcessing ? 'fetching user...' : ''
   ...
   const handleFetch = () => {
     // this will call the fetchUser request defined in the requests.ts file
-    // with userId as parameter and will turn the fetchUserState.isProcessing to true
+    // with userId as parameter and will turn the fetchUsersState.isProcessing to true
     // if the processId is undefined, it means that the process was cancelled just after being created, otherwise you can use it to check the process state
-    const processId = $user.request.fetchUser(props.userId)
+    const processId = $user.request.fetchUsers(props.userId)
   }
   const handleAbort = () => {
-    // if the fetchUserState was processing, calling this will abort it and turn its isProcessing state to false.
-    // to check the status of this process, you can use the processId and check its status in the fetchUserState.processes dictionary
-    $user.extraActions.abort('fetchUser')
+    // if the fetchUsersState was processing, calling this will abort it and turn its isProcessing state to false.
+    // to check the status of this process, you can use the processId and check its status in the fetchUsersState.processes dictionary
+    $user.extraActions.abort('fetchUsers')
   }
   ...
-  if (!!fetchUserState.error) {
+  if (!!fetchUsersState.error) {
     // error is the value passed in utils.finsh
     // for example: const errorMsg = "404 not found"
     // utils.finish({ status: "success/error", error: errorMsg })
-    // fetchUserState.error will be 404 not found
-    return <div>has fetching error: {fetchUserState.error}</div>
+    // fetchUsersState.error will be 404 not found
+    return <div>has fetching error: {fetchUsersState.error}</div>
   }
 
   return (
