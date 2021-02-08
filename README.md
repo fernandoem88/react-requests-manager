@@ -32,7 +32,7 @@ This implies 3 points:
 
 - for each action, we should add the _processing_ and the _error_ states to the redux store and handle at least 3 cases in our reducer (_request-start_, _request-success_ and _request-failure_).
 - it will be a lil bit tricky to abort our requests processes
-- we have only one processing type, that is the linear one: start processing and finish with success or error. If we want for example to have a queue processing type, we should implement it by ourselves or use another library.
+- we have only one processing type, that is "start processing and finish with success or error". If we want for example to have a queue processing type, we should implement it by ourselves or use another library.
 
 let's see a simple example of a redux-thunk action
 
