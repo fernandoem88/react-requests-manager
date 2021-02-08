@@ -612,18 +612,22 @@ a special case, if you did not call utils.start yet, you can return false to can
 
 ## utils.abortPrevious
 
-## utils.getProcessState vs utils.getRequestState
+## utils.getRequestState
+
+## utils.getProcessState
 
 # Queue request utils
 
-the only one difference between other request types and the queue one is the wait to start.
+the only one difference between other request types and the queue one is the wait they start. the Queue type wrapper utils provide the _inQueue_ helper that returns a _promise_ which allows us to wait for the previous process to finish/abort/cancel to start processing the new one.
 
-## utils.inQueue (only for Queue type wrapper)
+## utils.inQueue
 
 ```ts
+...
 await utils.inQueue(function onStart() {
   // on start logic
 })
+...
 ```
 
 # Action utils
