@@ -79,12 +79,12 @@ const usersReducer = (state = initialState, { type, payload }) => {
 
 using the _requests-manager_ approach will
 
-- keep your redux-state clean and because all states are managed by the library
-- let you have a total control of all processes for all requests
-- change processing types in a simple way using **requests wrapper**: Queue, Multi and Single
+- keep your redux-state clean because all requests (_async actions_) states are managed by the library
+- let you have a full control of all processes for every async actions
+- give you a simple way to change request/processing type using **requests type wrapper**: Queue, Multi and Single
 
 ```ts
-import { Single, Queue, Multi } from "react-requests-manager"
+import { Single } from "react-requests-manager"
 
 // defining fetchUsers async action to fetch users from db
 const fetchUsers = Single(async (utils: RequestUtils<any>, userIds: string[]) => {
@@ -105,7 +105,8 @@ const fetchUsers = Single(async (utils: RequestUtils<any>, userIds: string[]) =>
 })
 ```
 
-until now we can say that the action implementation in this approach is quiet similar to the redux-thunk one. let's now see what changes in the reducer side!
+until now we can notice that the action's implementation in this approach is quiet similar to the redux-thunk one.
+let's now see what changes in the reducer side!
 
 ```ts
 // application state
@@ -126,17 +127,16 @@ const usersReducer = (state = initialState, { type, payload }) => {
 }
 ```
 
-here, we can clearly see, the reducer side is clean, and this will be the case for every async action we will define in our application.
+Here, we can clearly see how the reducer side is clean, and this will be the case for every async action we will define in our application.
 
-The access to the requests state is kept simple and easy using the _useRequests_ hook that accepts a _selector function_ to pick a determined state from the _requests record (reqs)_. Each _key_ from _reqs_ is an object with the following signature { _isProcessing: boolean_, _error: any_, _details: RequestDetails_ } that reflect the respective request state.
+The access to the requests state is kept simple and easy using the _useRequests_ hook that accepts a _selector function_ to pick a determined state from the _requests record (reqs)_.
+Each _key_ from _reqs_ is an object with the following signature { _isProcessing: boolean_, _error: any_, _details: RequestDetails_ } that reflect the respective request state.
 
-let's see and compare this approach to the standard one.
+let's see and compare both approaches.
 
 ```ts
-
 // access requests and application state in the standard and common way
 const MyComponent = () => {
-
   // data
   const users = useSelector(state => state.users)
   // requests
@@ -144,7 +144,6 @@ const MyComponent = () => {
   const fetchUsersError = useSelector(state => state.fetchUsersError)
   ...
 }
-
 
 // access requests and application state using requests-manager approach
 const MyComponent = () => {
@@ -157,9 +156,9 @@ const MyComponent = () => {
 }
 ```
 
-We saw the benefit in the _reducer state_ side, but another one is that aborting a process is made easy in this library.
+We saw the benefit in the _reducer state_ side, but another one is that aborting a process is made easy in this library using extra actions over the request, and we will see it later.
 
-this is how we should change _fetchUsers_ action to tell the manager how to abort concretly the request: passing the _abort function_ to _utils.onAbort_ callback.
+let's just see how we should change _fetchUsers_ action to tell the manager how to abort concretly the request: passing the _abort function_ to _utils.onAbort_ callback.
 
 ```ts
 import { Single, Queue, Multi } from "react-requests-manager"
@@ -195,9 +194,9 @@ last benefit is the _request type_ wrappers that allows you to have different ap
 
 ## Usage
 
-we should pass an async callback to the **request type wrapper**.
+we should pass an async callback to the **request type wrapper** where we will define our request logic.
 
-for example if we define a fetchData
+for example if we want to define a fetchData
 
 ```ts
 import { Single } from 'react-requests-manager'
@@ -214,10 +213,10 @@ const fetchData = Single<Params>(
 
 ## Request vs Process
 
-- a request is an action where tasks will be defined
-- a process is just an istance of a given request (we can have many processes of the same request running at the same time)
+- a request is an action where async tasks will be defined
+- a process is just an instance of a given request (we can have many processes of the same request running at the same time in our application)
 
-for example if you define a _fetchUser_ request, every time you will call it in your application, the manager will create a new process of the request. each process state will have an impact to the final request state. the _request utils_ object has access to the store and will help to define properly the process state and at the same time, also the request state.
+for example if we define a _fetchUsers_ request, every time we will call it in our application, the manager will create a new process of the request. Each process state will have an impact to the final request state. the _request utils_ object has access to the store and will help to define properly the _process state_ and at the same time, also the _request state_.
 
 we can see a more detailed example, creating a **requests-manager/requests.ts** file where we'll define some requests as follows
 
@@ -294,26 +293,37 @@ export const deleteComment = Multi(async (utils, comment: { id: string }) => {
 
 after defining requests logic, we should bind them to the manager using **createRequests** and **createManager** imported from _react-requests-manager_.
 
+but first, if we want to define some extra actions over our requests, we can create a **actions.ts** file to do so.
+
+```ts
+import { ActionUtils } from 'react-requests-manager'
+import * as REQS from './requests'
+// REQS = { fetchUsers, fetchImage, deleteComment }
+
+type AU = ActionsUtils<typeof REQS>
+
+// here we can define extra actions to abort, reset request or clear errors from some requests
+export const abort = (utils: AU, requestName: keyof typeof REQS) => {
+  utils.abort(requestName)
+}
+export const abortAll = (utils: AU) => {
+  utils.abort()
+}
+export const reset = (utils: AU, requestName: keyof typeof REQS) => {
+  utils.resetRequest(requestName)
+}
+```
+
 let's then implement it in the **requests-manager/index.ts** file as follows
 
 ```ts
 import { createRequests, createManager } from 'react-requests-manager'
 import * as REQS from './requests'
+import * as EXTRA_ACTIONS from './actions'
 // REQS = { fetchUsers, fetchImage, deleteComment }
 
 // userRC: user requests configurator: helper that allows us to bind the requests to the requests manager
-export const userRC = createRequests(REQS, {
-  // here you can define extra actions over the requests: abort, reset, clear errors...
-  abort(utils, requestName: keyof typeof request) {
-    utils.abort(requestName)
-  },
-  abortAll(utils) {
-    utils.abort()
-  },
-  reset(utils, requestName: keyof typeof request) {
-    utils.resetRequest(requestName)
-  }
-})
+export const userRC = createRequests(REQS, EXTRA_ACTIONS) // EXTRA_ACTIONS is optional
 
 export const $user = createManager('USER', userRC)
 
