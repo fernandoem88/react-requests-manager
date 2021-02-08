@@ -1,7 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { shallowEqual } from 'shallow-utils'
-import { StateManagerStore } from 'state-manager-store'
-import { RequestState, Get3rdParams, Get2ndParams } from 'types'
+import {
+  RequestState,
+  Get3rdParams,
+  Get2ndParams,
+  StateManagerStore
+} from 'types'
 
 import createStore from './store'
 import { Subject } from './subject'
