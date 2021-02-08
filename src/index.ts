@@ -6,7 +6,9 @@ export {
   ProcessState,
   ProcessStatus,
   ProcessingType,
-  Request
+  RequestDetails,
+  Request,
+  StateManagerStore
 } from 'types'
 
 export * from './utils'

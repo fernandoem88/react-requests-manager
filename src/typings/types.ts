@@ -135,31 +135,33 @@ declare module 'types' {
     error?: Error
   }
 
+  interface RequestDetails<Params> {
+    name: string
+    id: string
+    context: string
+    processes: Dictionary<ProcessState<Params>>
+    count: {
+      // created: number;
+      suspended: number
+      processing: number
+      // not finished
+      cancelled: number
+      aborted: number
+      // finish
+      success: number
+      error: number
+      // total without created
+      total: number
+    }
+  }
+
   /**
    * @description RequestState comes from RequestInfo excluding some keys
    */
   export interface RequestState<Params = any> {
     isProcessing: boolean
     error?: any
-    details: {
-      name: string
-      id: string
-      context: string
-      processes: Dictionary<ProcessState<Params>>
-      count: {
-        // created: number;
-        suspended: number
-        processing: number
-        // not finished
-        cancelled: number
-        aborted: number
-        // finish
-        success: number
-        error: number
-        // total without created
-        total: number
-      }
-    }
+    details: RequestDetails<Params>
   }
   export type ProcessingType = 'QueueType' | 'MultiType' | 'SingleType'
   // export type RequestInfoRecord = Record<any, RequestInfo>;
@@ -350,6 +352,11 @@ declare module 'types' {
     }
   }
 
+  export interface StateManagerStore<State = any> {
+    getState: () => State
+    subscribe: (listener: () => void) => Function | { unsubscribe: Function }
+  }
+
   export type ActionType = keyof ActionPayload
   export interface Action<K extends ActionType | any = any> {
     type: ActionType
@@ -358,14 +365,6 @@ declare module 'types' {
 }
 
 declare module 'uniqid'
-
-declare module 'state-manager-store' {
-  export interface StateManagerStore<State = any> {
-    // dispatch: (action: A) => void
-    getState: () => State
-    subscribe: (listener: () => void) => Function | { unsubscribe: Function }
-  }
-}
 
 declare module 'shallow-utils' {
   export function shallowEqual<T extends any>(v1: T, v2: T): boolean
