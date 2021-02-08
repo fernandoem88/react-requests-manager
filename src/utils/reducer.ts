@@ -207,17 +207,26 @@ const getReducer = (store: Store, contextId: string) => {
         return false
       }
 
+      let shouldDispatch = true
+
       helpers.modifyRequestInfo(requestName as string, (draft: RequestInfo) => {
         const { byId, ids } = draft.processes
-        byId[processId].status = 'cancelled'
-        byId[processId].keepInStateOnCancel = keepInState
-        draft.isProcessing = draft.isProcessing = getIsProcessing(
-          requestName as string,
-          byId,
-          ids
-        )
+        const isCreated = byId[processId].status === 'created'
+        const shouldDeleteIt = isCreated || !keepInState
+        if (shouldDeleteIt) {
+          // if we are not keeping it in state so we should delete it
+          draft.processes.ids = ids.filter((id) => id !== processId)
+          delete byId[processId]
+        } else {
+          byId[processId].status = 'cancelled'
+          byId[processId].keepInStateOnCancel = keepInState
+        }
+        if (isCreated) {
+          shouldDispatch = false
+        }
+        draft.isProcessing = getIsProcessing(requestName as string, byId, ids)
       })
-      return true
+      return shouldDispatch
     }
   }
 

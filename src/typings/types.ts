@@ -140,6 +140,7 @@ declare module 'types' {
     id: string
     context: string
     processes: Dictionary<ProcessState<Params>>
+    processesIds: string[]
     count: {
       // created: number;
       suspended: number

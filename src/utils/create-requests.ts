@@ -140,10 +140,7 @@ const createRequests = () => <
        * @param options
        * @description cancel this request based on all processes state
        */
-      const cancel: RequestUtils<any>['cancel'] = function (
-        this: { skipDispatch?: boolean },
-        options
-      ) {
+      const cancel: RequestUtils<any>['cancel'] = function (options) {
         const req = helpers.getRequestInfo(requestName as string)
         const {
           processes: { byId }
@@ -158,9 +155,8 @@ const createRequests = () => <
 
         const shouldDispatch = stateReducer.ON_CANCEL(payload)
         if (!shouldDispatch) return
-        const skipDispatch = !keepInState || !!this.skipDispatch
 
-        helpers.dispatchToHooks({ type: 'ON_CANCEL', payload }, skipDispatch)
+        helpers.dispatchToHooks({ type: 'ON_CANCEL', payload })
         throw new Error('ON_CANCEL')
       }
 

@@ -1,6 +1,6 @@
 {
   "name": "react-requests-manager",
-  "version": "1.0.1-6",
+  "version": "1.0.0",
   "description": "have a full control on your async actions with abort, queue and multi-processing features",
   "author": {
     "name": "Fernando Ekutsu Mondele",
@@ -69,6 +69,15 @@
     "typescript": "^3.7.5",
     "uniqid": "^5.2.0"
   },
+  "keywords": [
+    "react",
+    "requests",
+    "manager",
+    "async",
+    "actions",
+    "redux",
+    "thunk"
+  ],
   "files": [
     "dist"
   ]

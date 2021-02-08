@@ -22,9 +22,9 @@ Since we will talk a lot about _requests_ and _processes_, let's then clarify th
 
 For example if we define a _fetchUsers_ request, every time we will call it in our project, the manager will create a new process, and each process state will have an impact to the final request state.
 
-# Common way vs Requests-manager way
+# Common approach vs Requests-manager approach
 
-## common way
+## common approach
 
 Currently, the common way to manage our async actions is to define a _redux-thunk_ action and dispatch each of its state to the _redux_ store.
 
@@ -88,9 +88,9 @@ const usersReducer = (state = initialState, { type, payload }) => {
 }
 ```
 
-## requests-manager way
+## requests-manager approach
 
-instead, if we decide to use the _requests-manager_ approach, it will help us to:
+Instead, if we decide to use the _requests-manager_ approach, it will help us to:
 
 - keep our redux-state clean because all _requests_ states are managed by the library
 - have a full control of all _processes_ for every _request_
@@ -573,7 +573,7 @@ utils.start(function onStart(){
 
 ## utils.finish
 
-when you have the server response you will probably need to dispatch it your application state manager (redux for example), this is the place to do so.
+when you have the server response you will probably need to dispatch it to your application state manager (redux for example), this is the place to do so.
 
 ```ts
 type StatusData =
@@ -595,7 +595,9 @@ utils.finish(status, () => {
 // the error value will be passed to the request Error value
 // while the status will be only for the process.
 utils.finish({
+  // we can access the status from the "process state"
   status: 'error',
+  // we can access the error from the "request state"
   error: {
     pippo: '404 not found',
     pluto: '500 server error'
@@ -605,16 +607,127 @@ utils.finish({
 
 ## utils.cancel
 
-after some verifications, if the process is not eligible to stay alive, you can cancel it inside the request body using exclusively the utils.cancel helper.
-a special case, if you did not call utils.start yet, you can return false to cancel the process
+if at certain point of the request life cycle, the process does not satisfy some conditions to stay alive,
+we can cancel it inside the request body either using the _utils.cancel_ helper or simply by _returning false_.
+
+it's better to _return false_ if the process _did not start yet_ and use _utils.cancel_ otherwise.
+
+```ts
+const login = async (utils) => {
+  if (utils.getState().isProcessing) {
+    return false
+  }
+  utils.start()
+}
+
+const login = async (utils) => {
+  utils.start()
+  if (utils.getState().isProcessing) {
+    utils.cancel()
+  }
+}
+```
+
+By default, a cancelled process is deleted from the request state, to keep it in the state we should use the **keepInStateOnCancel** option!
+
+```ts
+const login = async (utils) => {
+  utils.start()
+  if (utils.getState().isProcessing) {
+    utils.cancel({ keepInStateOnCancel: true })
+  }
+}
+```
 
 ## utils.onAbort
 
+the onAbort is the place where we abort the request sent to the server and define some final process logic like dispatching to the redux or pushing url to the history.
+
+```ts
+utils.onAbort(function abort() {
+  // this function should abort the server request
+})
+```
+
+whenever the abort function will throw an error and we want to catch it by using the onFinish callback from _utils.finish_, we can use the **catchError** option
+
+```ts
+utils.onAbort(req.abort, { catchError: true })
+
+try {
+  await req.send()
+} catch (error) {
+  utils.finish('error', function onFinsh() {
+    // req.abort make the req.send to reject an error.
+    // the error will be caught here
+    // on finish callback will be executed
+    // the process status will still be aborted! (not error)
+  })
+}
+```
+
 ## utils.abortPrevious
+
+allows us to abort previous processes inside the request body!
+
+```ts
+const pagination = async (utils, index: number) => {
+  // aborting all previous processes
+  utils.abortPrevious()
+}
+```
+
+we can also select which process to abort
+
+```ts
+const fetchData = async (utils, priority: 'admin' | 'standard') => {
+  if (priority === 'admin') {
+    // when trying to fetchData from admin, we will abort all standard users requests
+    utils.abortPrevious((process) => process.params === 'standard')
+  }
+}
+```
+
+all aborted processes, are deleted from the request by default. to keep them in the request state we should use the **keepInStateOnAbort** option
+
+```ts
+const fetchData = async (utils, priority: 'admin' | 'standard') => {
+  if (priority === 'admin') {
+    // when trying to fetchData from admin, we will abort all standard users requests
+    utils.abortPrevious((process) => process.params === 'standard', {
+      keepInStateOnAbort: true
+    })
+  }
+}
+```
 
 ## utils.getRequestState
 
+Allows us to access the request state from the request body.
+
+```ts
+const login = async (utils) => {
+  const initialReqState = utils.getRequestState()
+  if (initialReqState.isProcessing) {
+    // if we are already trying to login, we can already
+    return false
+  }
+  utils.start()
+}
+```
+
 ## utils.getProcessState
+
+an helper to get the current process state
+
+```ts
+const test = async (utils) => {
+  const initialStatus = utils.getProcessState().status
+  utils.start()
+  const currentStatus = utils.getProcessState().status
+  const shouldBeFalse = initialStatus === currentStatus
+}
+```
 
 # Queue request utils
 
@@ -623,11 +736,11 @@ the only one difference between other request types and the queue one is the wai
 ## utils.inQueue
 
 ```ts
-...
 await utils.inQueue(function onStart() {
   // on start logic
+  // dispatch some action if nnecessary
+  // push history if needed!
 })
-...
 ```
 
 # Action utils
@@ -643,6 +756,7 @@ await utils.inQueue(function onStart() {
 in the case you want to have a **selector hook** where you can have access both to your application data state and the requests state, it's possible by using _bindToStateManager_
 
 ```ts
+import { createStore } from 'redux'
 import reducers, { initialState } from './store/reducers'
 import { $users } from './store/async/users'
 import { $$ } from './store/async'
