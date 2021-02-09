@@ -184,6 +184,7 @@ const createContext = () => <
           }
         }
         const smSubscription = stateManagerStore.subscribe(() => {
+          console.log('subscribe', stateManagerStore.getState())
           doUpdate()
         })
         const rmSubscription = dispatcher.subscribe((action) => {
