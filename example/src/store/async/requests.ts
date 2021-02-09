@@ -1,6 +1,6 @@
 import { Single, Queue, Multi } from 'react-requests-manager'
 import { configsUtils } from '../../configs'
-import { dispatchError, dispatchSuccess } from '../reducers/helpers'
+import { dispatchError, dispatchSuccess } from '../reducers/actions'
 
 const { getConfig } = configsUtils
 const { api } = getConfig()

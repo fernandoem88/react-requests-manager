@@ -3,15 +3,13 @@ import RequestItem from '../RequestItem'
 import { useStoreAndRequests } from '../../store'
 import { labels } from '../../constants'
 import { Header, Result } from './styled'
+// import { $user } from '../../store/async'
 
 const App = React.memo(() => {
-  const users = useStoreAndRequests((state) => {
-    return state.users
+  const { type, users } = useStoreAndRequests((state) => {
+    return state
   })
-  const type = useStoreAndRequests((state) => {
-    console.log('useStoreAndRequests', state)
-    return state.type
-  })
+
   return (
     <div
       style={{ width: '100%', maxWidth: 580, margin: 'auto', marginTop: 50 }}

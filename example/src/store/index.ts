@@ -7,7 +7,3 @@ export const APP_STORE: Store<State, any> = createStore(reducer, initialState)
 export const { useSelector: useStoreAndRequests } = $user.bindToStateManager(
   APP_STORE
 )
-
-APP_STORE.subscribe(() => {
-  console.log('subscription', APP_STORE.getState())
-})

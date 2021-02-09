@@ -190,9 +190,9 @@ const createRequests = () => <
         }
         const shouldDispatch = stateReducer.ON_FINISH(payload)
         if (!shouldDispatch) {
-          const process = helpers.getProcessInfo(reqName, processId)
-          if (!process) return
-          const { handleAbortOnErrorCallback } = process
+          const prcss = helpers.getProcessInfo(reqName, processId)
+          if (!prcss) return
+          const { handleAbortOnErrorCallback } = prcss
           if (handleAbortOnErrorCallback && onFinish) {
             onFinish() // callable only once
             helpers.modifyRequestInfo(reqName, (draft) => {
@@ -228,7 +228,7 @@ const createRequests = () => <
       ACTION_UTILS.resetRequest(requestName)
       const requestIfo = helpers.getRequestInfo(requestName)
       const processId = uniqid('ProcessId__')
-      const process: ProcessInfo = {
+      const prcss: ProcessInfo = {
         index: requestIfo.totalCreated, // + 1
         id: processId,
         params,
@@ -238,13 +238,13 @@ const createRequests = () => <
         timestamp: new Date().getTime(),
         metadata: {}
       }
-      return process
+      return prcss
     }
 
-    const addProcess = (requestName: string, process: ProcessInfo) => {
+    const addProcess = (requestName: string, prcss: ProcessInfo) => {
       helpers.modifyRequestInfo(requestName, (draft) => {
-        const { id: processId } = process
-        draft.processes.byId[processId] = process
+        const { id: processId } = prcss
+        draft.processes.byId[processId] = prcss
         draft.processes.ids.push(processId)
         draft.totalCreated += 1
       })
@@ -260,12 +260,12 @@ const createRequests = () => <
       requestCreator: RequestCreator
     ) => {
       return (params: any) => {
-        // for each call, we create a new process
-        const process = createProcess(requestName, params)
-        addProcess(requestName, process)
+        // for each call, we create a new prcss
+        const prcss = createProcess(requestName, params)
+        addProcess(requestName, prcss)
         const requestUtils: RequestUtils<any> = getRequestUtils(
           requestName,
-          process.id
+          prcss.id
         )
         const __requestCreator__ = requestCreator.bind({
           contextId,
@@ -274,22 +274,27 @@ const createRequests = () => <
         }) as typeof requestCreator
         const promise = __requestCreator__(requestUtils, params)
         helpers.handleRequestErrors(requestUtils, promise)
-        const { status } = helpers.getProcessInfo(requestName, process.id)
+        const { status } = helpers.getProcessInfo(requestName, prcss.id)
 
         if (status === 'created' || status === 'cancelled') {
           // to show only for dev
+          // if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
+          //   // dev code
+          //   const description =
+          //     status === 'cancelled'
+          //       ? 'was cancelled after being created'
+          //       : 'did not started properly, if you cancelled it using "return false", just ignore this warning! every created prcss must turned to started, suspended or cancelled!'
+          //   console.warn(
+          //     `Warning on ${requestName} request: prcss with id ${prcss.id} ${description}`
+          //   )
+          // } else {
+          //   // production code
+          // }
 
-          const description =
-            status === 'cancelled'
-              ? 'was cancelled after being created'
-              : 'did not started properly, if you cancelled it using "return false", just ignore this warning! every created process must turned to started, suspended or cancelled!'
-          console.warn(
-            `Warning on ${requestName} request: process with id ${process.id} ${description}`
-          )
           return undefined
         }
 
-        return process.id
+        return prcss.id
       }
     }
 

@@ -12,6 +12,14 @@ import { Subject } from './subject'
 import { useForceUpdate, useShallowEqualRef } from '../hooks.ts'
 import getHelpers, { copy } from './helpers'
 
+const doUnsubscribe = (subscription: any) => {
+  if (typeof subscription === 'function') {
+    subscription()
+  } else if ('unsubscribe' in subscription) {
+    subscription.unsubscribe()
+  }
+}
+
 const createContext = () => <
   Configurator extends (store: any, name: string) => any
 >(
@@ -55,7 +63,7 @@ const createContext = () => <
 
     const selectorRef = useRef(selector)
     selectorRef.current = selector
-    const [initialSelectedValue] = useState<ReturnType<Selector>>(() => {
+    const [initialSelectedValue] = useState(() => {
       return copy(selector(initialReqs, params)) as ReturnType<Selector>
     })
     const selectedValueRef = useRef({
@@ -74,7 +82,7 @@ const createContext = () => <
       return true
     }, [])
     // if shouldCheckUpdateInMainBodyRef.current is true, we will check for update in the body of this hook not in the useEffect
-    const shouldCheckUpdateInMainBodyRef = useRef(true)
+    const shouldCheckUpdateInMainBodyRef = useRef(false)
     // const shouldCheckUpdateInUseEffectRef = useRef(false)
     const paramsRef = useShallowEqualRef(params)
 
@@ -93,6 +101,7 @@ const createContext = () => <
         helpers.updateSubscribersCount(-1)
       }
     }, [])
+
     useEffect(() => {
       const dispatcher = helpers.getDispatcher()
       const doUpdate = () => {
@@ -102,12 +111,14 @@ const createContext = () => <
           forceUpdate()
         }
       }
+
+      doUpdate() // first update
       const subscription = dispatcher.subscribe((action) => {
         if (action.contextId !== contextId) return
         doUpdate()
       })
       return subscription.unsubscribe
-    }, [])
+    }, [checkUpdate, forceUpdate])
     return selectedValueRef.current.value as ReturnType<Selector>
   }
 
@@ -136,38 +147,40 @@ const createContext = () => <
       const [params] = args
       // am using useState to not define the initial state again
       const [initialCombined] = useState(getCombinedState)
+
       const selectorRef = useRef(selector)
       selectorRef.current = selector
-      const selectedValueRef = useRef({
-        value: copy(
+      const [initialSelectedValue] = useState<ReturnType<Selector>>(() => {
+        return copy(
           selector(initialCombined.state, initialCombined.requests, params)
         ) as ReturnType<Selector>
       })
+      const selectedValueRef = useRef<{ value: ReturnType<Selector> }>({
+        value: initialSelectedValue
+      })
       const paramsRef = useShallowEqualRef(params)
       // checkUpdate returns true if the selected value is updated
-      const checkUpdate = useCallback(
-        (combined: ReturnType<typeof getCombinedState>) => {
-          const newSelectedValue = selectorRef.current(
-            combined.state,
-            combined.requests,
-            paramsRef.current
-          )
-          const isEqual = shallowEqual(
-            { value: newSelectedValue },
-            { value: selectedValueRef.current.value }
-          )
-          if (isEqual) return false
-          selectedValueRef.current = { value: copy(newSelectedValue) }
-          return true
-        },
-        []
-      )
+      const checkUpdate = useCallback(() => {
+        const combined = getCombinedState()
+        const newSelectedValue = selectorRef.current(
+          combined.state,
+          combined.requests,
+          paramsRef.current
+        )
+        const isEqual = shallowEqual(
+          { value: newSelectedValue },
+          { value: selectedValueRef.current.value }
+        )
+        if (isEqual) return false
+        selectedValueRef.current = { value: copy(newSelectedValue) }
+        return true
+      }, [])
       // if shouldCheckUpdateInMainBodyRef.current is true, we will check for update in the body of this hook not in the useEffect
-      const shouldCheckUpdateInMainBodyRef = useRef(true)
+      const shouldCheckUpdateInMainBodyRef = useRef(false)
       // const shouldCheckUpdateInUseEffectRef = useRef(false)
       if (shouldCheckUpdateInMainBodyRef.current) {
         // shouldCheckUpdateInUseEffectRef.current = false
-        checkUpdate(getCombinedState())
+        checkUpdate()
       } else {
         // it's false only when there was an update in useEffect so to avoid checking it twice
         shouldCheckUpdateInMainBodyRef.current = true
@@ -175,31 +188,34 @@ const createContext = () => <
       const forceUpdate = useForceUpdate()
 
       useEffect(() => {
-        const dispatcher = helpers.getDispatcher()
+        helpers.updateSubscribersCount(1)
+        return () => {
+          helpers.updateSubscribersCount(-1)
+        }
+      }, [])
+
+      useEffect(() => {
         const doUpdate = () => {
-          const shouldUpdate = checkUpdate(getCombinedState())
+          const shouldUpdate = checkUpdate()
           if (shouldUpdate) {
             shouldCheckUpdateInMainBodyRef.current = false
             forceUpdate()
           }
         }
-        const smSubscription = stateManagerStore.subscribe(() => {
-          console.log('subscribe', stateManagerStore.getState())
-          doUpdate()
-        })
+        doUpdate() // first update
+        const dispatcher = helpers.getDispatcher()
+        const smSubscription = stateManagerStore.subscribe(doUpdate)
         const rmSubscription = dispatcher.subscribe((action) => {
           if (action.contextId !== contextId) return
           doUpdate()
         })
+
         return () => {
-          if (typeof smSubscription === 'function') {
-            smSubscription()
-          } else if ('unsubscribe' in smSubscription) {
-            smSubscription.unsubscribe()
-          }
+          doUnsubscribe(smSubscription)
           rmSubscription.unsubscribe()
         }
-      }, [])
+      }, [checkUpdate, forceUpdate])
+
       return selectedValueRef.current.value
     }
 

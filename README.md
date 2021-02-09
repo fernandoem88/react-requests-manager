@@ -22,7 +22,7 @@ Since we will talk a lot about _requests_ and _processes_, let's then clarify th
 
 For example if we define a _fetchUsers_ request, every time we will call it in our project, the manager will create a new process, and each process state will have an impact to the final request state.
 
-> **if you are curious, You can already check a working example [here](https://codesandbox.io/s/requests-manager-1-9gv5h)**
+> **to have an idea of what it is, You can already check a working example [here](https://codesandbox.io/s/requests-manager-1-9gv5h)**
 
 ## Motivations (common approach)
 
@@ -730,19 +730,67 @@ await utils.inQueue(function onStart() {
 
 # Action utils
 
-// todo
+a set of utilities that help us to access requests and processes state and do some actions over them
+
+## utils.getRequestsState
+
+allows us to get a record of all the requests state
+
+```ts
+const reqs = utils.getRequestsState()
+if (reqs.fetchUsers.isProcessing) {
+  ...
+}
+```
+
+## utils.getRequestState
+
+allows us to access the state of a given request
+
+```ts
+const req = utils.getRequestState("fetchUsers")
+if (req.isProcessing) {
+  ...
+}
+```
 
 ## utils.abort
 
-// todo
+allows us to abort specified requests
 
-## utils.resetRequest
+```ts
+// abort all processes for all requests in the context
+utils.abort()
 
-// todo
+// abort all processes of a given request
+utils.abort(requestName)
+
+// abort some processes of a given request
+utils.abort(requestName, (prcss) => !!shouldAbort(prcss))
+```
 
 ## utils.clearErrors
 
-// todo
+usefull to delete error state from specific requests
+
+```ts
+// delete errors of all requests in the context
+utils.clearErrors()
+
+// delete error of a given request
+utils.clearErrors(requestName)
+
+// delete error for requests which selected value is true
+utils.clearErrors((req) => !!shouldClearError(req))
+```
+
+## utils.resetRequest
+
+in case the request is not processing but has some data, this helper allows us to clean it up.
+
+```ts
+utils.resetRequest(requestName)
+```
 
 # Bind to state manager
 
@@ -765,10 +813,6 @@ export const { useSelector: useStoreAndReqs2 } = $$.bindToStateManager(store)
 
 // useStoreAndReqs: (selector: (state: AppState, reqs: Requests) => R) => R
 ```
-
-## selectors
-
-// todo
 
 ## see also
 

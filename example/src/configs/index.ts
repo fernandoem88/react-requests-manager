@@ -1,7 +1,7 @@
 import { createActionUtils } from 'react-hooks-in-callback'
 
 // import uniqid from 'uniqid'
-import { useDispatch } from '../components/Provider'
+import { useDispatch } from 'react-redux'
 
 const getRandomType = () => {
   return getRandomNumber(10) > 3 ? 'success' : 'error'

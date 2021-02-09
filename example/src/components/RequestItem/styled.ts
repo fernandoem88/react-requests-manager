@@ -19,6 +19,9 @@ export const Title = styled.div.attrs({
 })<{}>`
   padding-right: 6px;
   flex-grow: 1;
+  & > select {
+    height: 24px;
+  }
 `
 export const Status = styled.div.attrs({
   'data-tbsc-name': 'RequestItem--Status'
@@ -56,10 +59,9 @@ Header.displayName = 'RequestItemHeader'
 export const AddProcess = styled.div.attrs({
   'data-tbsc-name': 'RequestItem--AddProcess'
 })<{}>`
-  width: calc(100% - 80px);
+  width: 100%;
   cursor: pointer;
   text-align: center;
-  text-transform: capitalize;
   border-radius: 5px;
   border: solid 1px lightblue;
   color: #2a5867;
