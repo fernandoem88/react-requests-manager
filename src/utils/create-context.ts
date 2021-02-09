@@ -66,8 +66,8 @@ const createContext = () => <
       const reqs = helpers.getRequests() as RequestsState
       const newSelectedValue = selectorRef.current(reqs, paramsRef.current)
       const isEqual = shallowEqual(
-        newSelectedValue,
-        selectedValueRef.current.value
+        { value: newSelectedValue },
+        { value: selectedValueRef.current.value }
       )
       if (isEqual) return false
       selectedValueRef.current = { value: copy(newSelectedValue) }
@@ -114,10 +114,12 @@ const createContext = () => <
   const bindToStateManager = <SMState>(
     stateManagerStore: StateManagerStore<SMState>
   ) => {
-    const getCombinedState = () => ({
-      state: stateManagerStore.getState(),
-      requests: getRequestsState()
-    })
+    const getCombinedState = () => {
+      return {
+        state: stateManagerStore.getState(),
+        requests: getRequestsState()
+      }
+    }
     // type SMStore = StateManagerStore<SMState>
     const useSelector = <
       Selector extends (
@@ -143,45 +145,47 @@ const createContext = () => <
       })
       const paramsRef = useShallowEqualRef(params)
       // checkUpdate returns true if the selected value is updated
-      const checkUpdate = useCallback(() => {
-        const combined = getCombinedState()
-        const newSelectedValue = selectorRef.current(
-          combined.state,
-          combined.requests,
-          paramsRef.current
-        )
-        const isEqual = shallowEqual(
-          newSelectedValue,
-          selectedValueRef.current.value
-        )
-        if (isEqual) return false
-        selectedValueRef.current = { value: copy(newSelectedValue) }
-        return true
-      }, [])
+      const checkUpdate = useCallback(
+        (combined: ReturnType<typeof getCombinedState>) => {
+          const newSelectedValue = selectorRef.current(
+            combined.state,
+            combined.requests,
+            paramsRef.current
+          )
+          const isEqual = shallowEqual(
+            { value: newSelectedValue },
+            { value: selectedValueRef.current.value }
+          )
+          if (isEqual) return false
+          selectedValueRef.current = { value: copy(newSelectedValue) }
+          return true
+        },
+        []
+      )
       // if shouldCheckUpdateInMainBodyRef.current is true, we will check for update in the body of this hook not in the useEffect
       const shouldCheckUpdateInMainBodyRef = useRef(true)
       // const shouldCheckUpdateInUseEffectRef = useRef(false)
       if (shouldCheckUpdateInMainBodyRef.current) {
         // shouldCheckUpdateInUseEffectRef.current = false
-        checkUpdate()
+        checkUpdate(getCombinedState())
       } else {
         // it's false only when there was an update in useEffect so to avoid checking it twice
         shouldCheckUpdateInMainBodyRef.current = true
       }
       const forceUpdate = useForceUpdate()
-      // useEffect(() => {
-      //   shouldCheckUpdateInUseEffectRef.current = true
-      // })
+
       useEffect(() => {
         const dispatcher = helpers.getDispatcher()
         const doUpdate = () => {
-          const shouldUpdate = checkUpdate()
+          const shouldUpdate = checkUpdate(getCombinedState())
           if (shouldUpdate) {
             shouldCheckUpdateInMainBodyRef.current = false
             forceUpdate()
           }
         }
-        const smSubscription = stateManagerStore.subscribe(doUpdate)
+        const smSubscription = stateManagerStore.subscribe(() => {
+          doUpdate()
+        })
         const rmSubscription = dispatcher.subscribe((action) => {
           if (action.contextId !== contextId) return
           doUpdate()

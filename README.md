@@ -146,16 +146,15 @@ Here, we can clearly see how the reducer side is clean, and this will be the sam
 The access to the _requests_ state is kept simple and easy using the **useRequests** hook that accepts a _selector function_ to pick a determined state from the _requests record_ (**reqs**).
 
 ```ts
-import { $users } from "./store/async/users"
+import { $users } from './store/async/users'
 // $users is the requests manager for users entity. we'll see later how to define it!
 
 const { useRequests } = $users
 
-const MyComponent = () => {
-  // data
-  // requests
-  const isFetchingUsers = useRequests(reqs => reqs.fetchUsers.isProcessing)
-  const fetchUsersError = useRequests(reqs => reqs.fetchUsers.error)
+const MyComponent: React.FC<any> = () => {
+  ...
+  const isFetchingUsers = useRequests((reqs) => reqs.fetchUsers.isProcessing)
+  const fetchUsersError = useRequests((reqs) => reqs.fetchUsers.error)
   ...
 }
 ```
@@ -237,7 +236,7 @@ let's focus now on the _requests.ts_ file and how to use different wrapper types
 
 ### Single type
 
-the "Single" type is the default one. so it's not mandatory to wrap the async action by it but it's still a good practice to do so in order to keep all requests' definition uniform. so we can wrap the _fetchUsers_ request without alterating its behaviour!
+the "Single" type is the default one. So it's not mandatory to wrap the async action but it's still a good practice to do so in order to keep all requests' definition uniform. So we can wrap the _fetchUsers_ request without alterating its behaviour!
 
 ```ts
 import { Single } from 'react-requests-manager'
@@ -270,7 +269,9 @@ export const fetchUsers = Single(async (utils, userIds: string[]) => {
 
 ### Queue type
 
-we can add another request that we will call _fetchImage_ and for a performance reason, we will want to handle each process one by one. so evry process will stay in a queue untill the previous one will finish or abort.
+usefull in the case we want to process all request instances one after another. Every new process will stay in a queue untill the last previous one will finish or abort, then the manager will start the next one from the queue following the arrival order.
+
+let's see an example defining _fetchImage_ request in our _requests.ts_ file.
 
 ```ts
 import { Queue } from 'react-requests-manager'

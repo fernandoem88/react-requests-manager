@@ -105,8 +105,8 @@ const createContextsGroup = () => <
       const reqs = getAllRequestsStates() as RequestsState
       const newSelectedValue = selectorRef.current(reqs, parameter)
       const isEqual = shallowEqual(
-        newSelectedValue,
-        selectedValueRef.current.value
+        { value: newSelectedValue },
+        { value: selectedValueRef.current.value }
       )
       if (isEqual) return false
       selectedValueRef.current = { value: copy(newSelectedValue) }
@@ -184,27 +184,29 @@ const createContextsGroup = () => <
       const paramsRef = useShallowEqualRef(params)
 
       // checkUpdate returns true if the selected value is updated
-      const checkUpdate = useCallback(() => {
-        const combined = getCombinedState()
-        const newSelectedValue = selectorRef.current(
-          combined.state,
-          combined.requests,
-          paramsRef.current
-        )
-        const isEqual = shallowEqual(
-          newSelectedValue,
-          selectedValueRef.current.value
-        )
-        if (isEqual) return false
-        selectedValueRef.current = { value: copy(newSelectedValue) }
-        return true
-      }, [])
+      const checkUpdate = useCallback(
+        (combined: ReturnType<typeof getCombinedState>) => {
+          const newSelectedValue = selectorRef.current(
+            combined.state,
+            combined.requests,
+            paramsRef.current
+          )
+          const isEqual = shallowEqual(
+            { value: newSelectedValue },
+            { value: selectedValueRef.current.value }
+          )
+          if (isEqual) return false
+          selectedValueRef.current = { value: copy(newSelectedValue) }
+          return true
+        },
+        []
+      )
       // if shouldCheckUpdateInMainBodyRef.current is true, we will check for update in the body of this hook not in the useEffect
       const shouldCheckUpdateInMainBodyRef = useRef(true)
       // const shouldCheckUpdateInUseEffectRef = useRef(false)
       if (shouldCheckUpdateInMainBodyRef.current) {
         // shouldCheckUpdateInUseEffectRef.current = false
-        checkUpdate()
+        checkUpdate(getCombinedState())
       } else {
         // it's false only when there was an update in useEffect so to avoid checking it twice
         shouldCheckUpdateInMainBodyRef.current = true
@@ -215,16 +217,20 @@ const createContextsGroup = () => <
       // })
       useEffect(() => {
         const doUpdate = () => {
-          const shouldUpdate = checkUpdate()
+          const shouldUpdate = checkUpdate(getCombinedState())
           if (shouldUpdate) {
             shouldCheckUpdateInMainBodyRef.current = false
             forceUpdate()
           }
         }
         // state manager
-        const smSubscription = stateManagerStore.subscribe(doUpdate)
+        const smSubscription = stateManagerStore.subscribe(() => {
+          doUpdate()
+        })
         // requests manager
-        const rmSubscription = dispatcher.subscribe(doUpdate)
+        const rmSubscription = dispatcher.subscribe(() => {
+          doUpdate()
+        })
         return () => {
           if (typeof smSubscription === 'function') {
             smSubscription()
