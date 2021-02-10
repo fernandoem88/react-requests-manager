@@ -264,23 +264,7 @@ declare module 'types' {
      */
     cancel: (options?: { keepInStateOnCancel?: boolean }) => void
     finish: (
-      statusData:
-        | 'success'
-        | 'error'
-        | {
-            /**
-             * @description process status
-             */
-            status: 'success' | 'error'
-            /**
-             * @description request error
-             */
-            error?: any
-            /**
-             * @description process metadata
-             */
-            metadata?: Dictionary<any>
-          },
+      finishStatus: 'success' | 'error' | FinishStatus,
       onFinish?: OnFinish
     ) => void
     abortPrevious: (
@@ -291,6 +275,21 @@ declare module 'types' {
       callback: OnAbortCallback,
       options?: { catchError?: boolean }
     ) => void
+  }
+
+  interface FinishStatus {
+    /**
+     * @description process status
+     */
+    status: 'success' | 'error'
+    /**
+     * @description request error
+     */
+    error?: any
+    /**
+     * @description process metadata
+     */
+    metadata?: Dictionary<any>
   }
 
   export interface RequestUtils<Params = any>

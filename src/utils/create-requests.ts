@@ -160,14 +160,20 @@ const createRequests = () => <
         throw new Error('ON_CANCEL')
       }
 
-      const onAbort: RequestUtils<any>['onAbort'] = (callback, options) => {
-        if (options?.catchError) {
-          helpers.modifyRequestInfo(reqName, (draft) => {
-            const { byId } = draft.processes
-            if (byId[processId]) {
-              byId[processId].handleAbortOnErrorCallback = true
-            }
-          })
+      const onAbort: RequestUtils<any>['onAbort'] = (
+        abortCallback,
+        options
+      ) => {
+        const callback = () => {
+          if (options?.catchError) {
+            helpers.modifyRequestInfo(reqName, (draft) => {
+              const { byId } = draft.processes
+              if (byId[processId]) {
+                byId[processId].handleAbortOnErrorCallback = true
+              }
+            })
+          }
+          abortCallback()
         }
         helpers.addAbortInfo(processId, { callback })
       }
@@ -178,10 +184,12 @@ const createRequests = () => <
         if (!shouldDispatch) return
         helpers.dispatchToHooks({ type: 'ON_CLEAR', payload })
       }
-      const finish: RequestUtils<any>['finish'] = (statusData, onFinish) => {
+      const finish: RequestUtils<any>['finish'] = (finishStatus, onFinish) => {
         const req = helpers.getRequestInfo(requestName as string)
         const finishData =
-          typeof statusData === 'string' ? { status: statusData } : statusData
+          typeof finishStatus === 'string'
+            ? { status: finishStatus }
+            : finishStatus
         const payload = {
           processingType: req.type,
           requestName: reqName,

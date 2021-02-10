@@ -133,18 +133,25 @@ const getReducer = (store: Store, contextId: string) => {
     },
     ON_CLEAR(payload) {
       const { requestName } = payload
+      let shouldDispatch = true
       helpers.modifyRequestInfo(requestName as string, (draft: RequestInfo) => {
+        shouldDispatch = draft.error !== undefined
         draft.error = undefined
       })
-      return true
+      return shouldDispatch
     },
     ON_CLEAR_GROUP(payload) {
+      let shouldDispatch = false
       helpers.modifyContextInfo(({ requests }) => {
         payload.requestNames.forEach((requestName: any) => {
-          requests[requestName as string].error = undefined
+          const draft = requests[requestName as string]
+          if (!shouldDispatch && draft.error !== undefined) {
+            shouldDispatch = true
+          }
+          draft.error = undefined
         })
       })
-      return true
+      return shouldDispatch
     },
     ON_FINISH(payload) {
       const {
@@ -152,7 +159,7 @@ const getReducer = (store: Store, contextId: string) => {
         processId,
         status,
         processingType,
-        metadata,
+        metadata = {},
         error
       } = payload
       const requestInfo = helpers.getRequestInfo(requestName as string)
@@ -180,7 +187,9 @@ const getReducer = (store: Store, contextId: string) => {
 
         byId[processId].status = status
 
-        byId[processId].metadata = metadata || {}
+        const md = byId[processId].metadata || {}
+        byId[processId].metadata = { ...md, ...metadata }
+
         if (processingType === 'SingleType') {
           draft.isProcessing = false
           ids.forEach((reqId) => {

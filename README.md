@@ -599,7 +599,7 @@ it's better to _return false_ if the process _did not start yet_ and use _utils.
 
 ```ts
 const login = async (utils) => {
-  if (utils.getState().isProcessing) {
+  if (utils.getRequestState().isProcessing) {
     return false
   }
   utils.start()
@@ -607,7 +607,7 @@ const login = async (utils) => {
 
 const login = async (utils) => {
   utils.start()
-  if (utils.getState().isProcessing) {
+  if (utils.getRequestState().isProcessing) {
     utils.cancel()
   }
 }
@@ -618,36 +618,9 @@ By default, a cancelled process is deleted from the request state, to keep it in
 ```ts
 const login = async (utils) => {
   utils.start()
-  if (utils.getState().isProcessing) {
+  if (utils.getRequestState().isProcessing) {
     utils.cancel({ keepInStateOnCancel: true })
   }
-}
-```
-
-## utils.onAbort
-
-the onAbort is the place where we abort the request sent to the server and define some final process logic like dispatching to the redux or pushing url to the history.
-
-```ts
-utils.onAbort(function abort() {
-  // this function should abort the server request
-})
-```
-
-whenever the abort function will throw an error and we want to catch it by using the onFinish callback from _utils.finish_, we can use the **catchError** option
-
-```ts
-utils.onAbort(req.abort, { catchError: true })
-
-try {
-  await req.send()
-} catch (error) {
-  utils.finish('error', function onFinsh() {
-    // req.abort make the req.send to reject an error.
-    // the error will be caught here
-    // on finish callback will be executed
-    // the process status will still be aborted! (not error)
-  })
 }
 ```
 
@@ -684,6 +657,43 @@ const fetchData = async (utils, priority: 'admin' | 'standard') => {
     })
   }
 }
+```
+
+## utils.onAbort
+
+the onAbort is the place where we abort the request sent to the server and define some final process logic like dispatching to the redux or pushing url to the history.
+
+```ts
+utils.onAbort(function abort() {
+  // this function should abort the server request
+})
+```
+
+whenever the abort function will throw an error and we want to catch it by using the onFinish callback from _utils.finish_, we can use the **catchError** option
+
+```ts
+utils.onAbort(req.abort, { catchError: true })
+
+try {
+  await req.send()
+} catch (error) {
+  utils.finish('error', function onFinsh() {
+    // req.abort make the req.send to reject an error.
+    // the error will be caught here
+    // on finish callback will be executed
+    // the process status will still be aborted! (not error)
+  })
+}
+```
+
+## utils.clearError
+
+set error state to undefined for the given request. a good place to do it is inside onStart callback
+
+```ts
+utils.start(() => {
+  utils.clearError()
+})
 ```
 
 ## utils.getRequestState
