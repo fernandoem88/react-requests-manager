@@ -1,6 +1,6 @@
 {
   "name": "react-requests-manager",
-  "version": "1.0.5-beta",
+  "version": "1.0.0",
   "description": "take a full control on your async actions with abort, queue and multi-processing features",
   "homepage": "https://www.linkedin.com/in/fernando-ekutsu-mondele-67405484/",
   "author": {
