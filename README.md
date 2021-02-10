@@ -260,9 +260,12 @@ export const fetchUsers = Single(async (utils, userIds: string[]) => {
       dispath({ type: 'ADD_USERS', payload: users })
     })
   } catch (error) {
-    utils.finish({ status: 'error', error }, function onError() {
-      // on error logic: optional
-    })
+    utils.finish(
+      { status: 'error', error: error?.message },
+      function onError() {
+        // on error logic: optional
+      }
+    )
   }
 })
 ```
@@ -543,13 +546,13 @@ const Users: React.FC<{ userIds: string[] }> = (props) => {
 
 ## utils.start
 
-if you are familiar with redux-thunk, you probably know that before sending a request to the server, you should dispatch a requestStart to the redux store, so utils.start works at the same way.
+if you are familiar with redux-thunk, you probably know that before sending a request to the server, you should dispatch a _request-start_ action to the redux store. _utils.start_ works at the same way.
 
 ```ts
 utils.start();
 // your process state will turn to process.status = "processing"
 ...
-// if you have update to do on start, you can pass a callback
+// if you have some updates, you can use the onStart callback
 utils.start(function onStart(){
   // dispatch to redux
   // utils.clearError(  )
@@ -558,22 +561,23 @@ utils.start(function onStart(){
 
 ## utils.finish
 
-when you have the server response you will probably need to dispatch it to your application state manager (redux for example), this is the place to do so.
+after getting the server response, we should let the manager know that by calling utils.finish, and if you need to dispatch the result to your application state manager (redux for example), yu can use the onFinish callback .
 
 ```ts
-type StatusData =
-  | ProcessStatus
-  | {
-      status: ProcessStatus
-      error?: any
-      metadata: Dictionary<any>
-    }
-utils.finish(FinishData)
+type FinishData = 'success' | 'error' | FinishStatus
+type FinishStatus = {
+  status: 'success' | 'error'
+  error?: any // error
+  metadata?: Dictionary<any> // data to save in the process state
+}
 
-const status: StatusData = 'success'
+utils.finish('success')
+
+utils.finish({ status: 'success', metadata: { totalUsers: 29 } })
+// utils.getProcessState().metadata.totalUsers will be 29 here
+
 // questo equivale a
-utils.finish(status, () => {
-  // this callback is optional
+utils.finish(status, function onFinish() {
   // dispatch to your application state manager
 })
 
@@ -817,19 +821,35 @@ interface StateManagerStore<State> {
   subscribe(listener: Function): Function | { unsubscribe: Function }
 }
 const store = createStore(reducers, initialState) as StateManagerStore<AppState>
+// users context example
 export const { useSelector: useStoreAndReqs } = $users.bindToStateManager(store)
 
-export const { useSelector: useStoreAndReqs2 } = $$.bindToStateManager(store)
+// combined contexts example
+export const { useSelector: useStoreAndCombinedReqs } = $$.bindToStateManager(
+  store
+)
 
 // useStoreAndReqs: (selector: (state: AppState, reqs: Requests) => R) => R
+// example
+const usersState = useStoreAndReqs((state, reqs) => {
+  const isFetchingUsers = reqs.fetchUsers.isProcessing
+  const { users } = state
+  return { isFetchingUsers, users }
+})
+
+const usersState = useStoreAndCombinedReqs((state, reqs) => {
+  const isFetchingUsers = reqs.users.fetchUsers.isProcessing
+  const { users } = state
+  return { isFetchingUsers, users }
+})
 ```
 
 ## see also
 
-- [react-hooks-in-callback](https://www.npmjs.com/package/react-hooks-in-callback): a package that will help you to remove undesired rerenders using hooks in callback
-
-- [react-redux-selector-utils](https://www.npmjs.com/package/react-redux-selector-utils): a package that will help you to define and use in a **clean**, **easy** and **fast** way your redux selectors
+- [react-hooks-in-callback](https://www.npmjs.com/package/react-hooks-in-callback)
+- [react-context-selector](https://www.npmjs.com/package/react-context-selector)
+- [react-redux-selector-utils](https://www.npmjs.com/package/react-redux-selector-utils)
 
 ## License
 
-MIT © [fernando ekutsu mondele](https://github.com/fernandoem88/react-requests-manager)
+MIT © [https://github.com/fernandoem88/react-requests-manager](https://github.com/fernandoem88/react-requests-manager)

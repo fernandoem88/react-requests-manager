@@ -8,7 +8,8 @@ export {
   ProcessingType,
   RequestDetails,
   Request,
-  StateManagerStore
+  StateManagerStore,
+  FinishStatus
 } from 'types'
 
 export * from './utils'
