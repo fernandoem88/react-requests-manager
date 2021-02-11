@@ -108,12 +108,17 @@ const fetchUsers = async (utils: RequestUtils<string[]>, userIds: string[]) => {
   try {
     const users = await api.getUsers(userIds).send()
     // dispatch({ type: "FETCH_USERS_SUCCESS", payload: users })
-    utils.finish({ status: "success" }, () => {
+    utils.finish({ status: "success", error: undefined }, () => {
       dispatch({ type: "SET_USERS", payload: users })
     })
   } catch (error) {
     // dispatch({ type: "FETCH_USERS_FAILURE", payload: error })
-    utils.finish({ status: "error", error }) // we dont dispatch error to the reducer
+    utils.finish({
+      status: "error",
+       // we dont dispatch error to the reducer
+       // we keep it to the request state
+      error: error?.message || "an error occured!"
+    })
   }
 }
 ```
@@ -246,6 +251,7 @@ export const fetchUsers = Single(async (utils, userIds: string[]) => {
   // in this example, utils will be of type RequestUtils<string>
   utils.start(function onStart() {
     // on success logic: optional
+    utils.clearError()
   })
   // you should replace this with a working example
   const req = API.getUsers(userIds)
@@ -255,13 +261,13 @@ export const fetchUsers = Single(async (utils, userIds: string[]) => {
   })
   try {
     const users = await req.send()
-    utils.finish('success', function onSuccess() {
+    utils.finish({ status: 'success', error: undefined }, function onSuccess() {
       // on success logic: optional
       dispath({ type: 'ADD_USERS', payload: users })
     })
   } catch (error) {
     utils.finish(
-      { status: 'error', error: error?.message },
+      { status: 'error', error: error?.message || '500: server error' },
       function onError() {
         // on error logic: optional
       }
@@ -283,20 +289,25 @@ import { Queue } from 'react-requests-manager'
 // all processes will eventually reach "utils.finish" (success or error) if no one abort/cancel them
 export const fetchImage = Queue(async (utils, image: Image) => {
   // in this example, utils will be of type RequestUtilsQueue<Image>
-  await utils.inQueue(function onStart(){
+  await utils.inQueue(function onStart() {
     // on start logic: optional
   })
   // you should replace this with a working example
   const req = API.fetchImage(image.id)
-  utils.onAbort(function abort(){
+  utils.onAbort(function abort() {
     // abort logic
     req.abort()
   })
   try {
     await req.send()
-    utils.finish("success")
-  } catch () {
-    utils.finish("error")
+    utils.finish('success', () => {
+      // dispatch result
+    })
+  } catch (error) {
+    const errorData = utils.getRequestState().error || {}
+    errorData[image.id] =
+      error?.message || `download failed for image ${image.id}!`
+    utils.finish({ status: 'error', error: errorData })
   }
 })
 ```
@@ -326,7 +337,7 @@ export const deleteComment = Multi(async (utils, comment: { id: string }) => {
   try {
     ...
     utils.finsh("success")
-  } catch () {
+  } catch (error ) {
     utils.finish("error")
   }
 })
@@ -561,22 +572,26 @@ utils.start(function onStart(){
 
 ## utils.finish
 
-after getting the server response, we should let the manager know that by calling utils.finish, and if you need to dispatch the result to your application state manager (redux for example), yu can use the onFinish callback .
+after getting the server response, we should let the manager know that by calling utils.finish, and if you need to dispatch the result to your application state manager (redux for example), you can use the onFinish callback .
 
 ```ts
-type FinishData = 'success' | 'error' | FinishStatus
-type FinishStatus = {
+type FinishStatus = 'success' | 'error' | FinishData
+type FinishData = {
+  // process status
   status: 'success' | 'error'
+  // process metadata
+  metadata?: Dictionary<any>
+  // request error
   error?: any // error
-  metadata?: Dictionary<any> // data to save in the process state
 }
+
+// utils.finish(finishStatus, onFinish)
 
 utils.finish('success')
 
 utils.finish({ status: 'success', metadata: { totalUsers: 29 } })
 // utils.getProcessState().metadata.totalUsers will be 29 here
 
-// questo equivale a
 utils.finish(status, function onFinish() {
   // dispatch to your application state manager
 })
@@ -805,6 +820,15 @@ in case the request is not processing but has some data, this helper allows us t
 ```ts
 utils.resetRequest(requestName)
 ```
+
+# processing status
+
+- **processing**: the process is started
+- **suspended**: the process is waiting in the queue until the previous one finishes
+- **cancelled**: the process was cancelled inside the request body using _utils.cancel_ or _returning false_
+- **aborted**: the process was cancelled by the _abort_ extra action or from _utils.abortProvious_ inside the request body
+- **success**: the process ended with finish status _success_
+- **error**: the process ended with finish status _error_
 
 # Bind to state manager
 

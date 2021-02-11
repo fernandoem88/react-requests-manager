@@ -263,10 +263,7 @@ declare module 'types' {
      * @param shouldCancel a function to check if the current process should be cancel or not
      */
     cancel: (options?: { keepInStateOnCancel?: boolean }) => void
-    finish: (
-      finishStatus: 'success' | 'error' | FinishStatus,
-      onFinish?: OnFinish
-    ) => void
+    finish: (finishStatus: FinishStatus, onFinish?: OnFinish) => void
     abortPrevious: (
       selector?: (process: ProcessState<Params>, index: number) => boolean,
       options?: { keepInStateOnAbort: boolean }
@@ -277,19 +274,21 @@ declare module 'types' {
     ) => void
   }
 
-  interface FinishStatus {
+  export type FinishStatus = 'success' | 'error' | FinishData
+
+  export interface FinishData {
     /**
      * @description process status
      */
     status: 'success' | 'error'
     /**
-     * @description request error
-     */
-    error?: any
-    /**
      * @description process metadata
      */
     metadata?: Dictionary<any>
+    /**
+     * @description request error
+     */
+    error?: any
   }
 
   export interface RequestUtils<Params = any>

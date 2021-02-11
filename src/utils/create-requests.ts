@@ -194,7 +194,8 @@ const createRequests = () => <
           processingType: req.type,
           requestName: reqName,
           processId,
-          ...finishData
+          ...finishData,
+          error: 'error' in finishData ? finishData.error : req.error
         }
         const shouldDispatch = stateReducer.ON_FINISH(payload)
         if (!shouldDispatch) {
