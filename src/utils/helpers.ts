@@ -25,6 +25,14 @@ enum ExcludedFromProcess {
 
 export const copy = <V>(value: V) => produce(value, () => {}) as V
 
+export const doUnsubscribe = (subscription: any) => {
+  if (typeof subscription === 'function') {
+    subscription()
+  } else if ('unsubscribe' in subscription) {
+    subscription.unsubscribe()
+  }
+}
+
 export const isCancellableStatus = (status: ProcessStatus) => {
   return (
     status === 'created' || status === 'suspended' || status === 'processing'

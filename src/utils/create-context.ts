@@ -10,15 +10,7 @@ import createStore from './store'
 import { Subject } from './subject'
 
 import { useForceUpdate, useShallowEqualRef } from '../hooks.ts'
-import getHelpers, { copy } from './helpers'
-
-const doUnsubscribe = (subscription: any) => {
-  if (typeof subscription === 'function') {
-    subscription()
-  } else if ('unsubscribe' in subscription) {
-    subscription.unsubscribe()
-  }
-}
+import getHelpers, { copy, doUnsubscribe } from './helpers'
 
 const createContext = () => <
   Configurator extends (store: any, name: string) => any
@@ -42,8 +34,9 @@ const createContext = () => <
     ? Params[0]
     : undefined
 
+  const dispatcher = new Subject()
   const helpers = getHelpers(store, contextId)
-  helpers.setContextDispatcher(new Subject())
+  helpers.setContextDispatcher(dispatcher)
   const getRequestsState = () =>
     helpers.getRequests() as {
       [K in RequestKey]: RequestState<RequestsParams<K>>
@@ -227,6 +220,7 @@ const createContext = () => <
     extraActions: actions as ExtraActions,
     useRequests,
     getState: getRequestsState,
+    subscribe: (listener: () => void) => dispatcher.subscribe(listener),
     bindToStateManager
   }
 }

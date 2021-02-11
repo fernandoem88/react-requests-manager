@@ -11,7 +11,7 @@ import createStore from './store'
 import { Subject } from './subject'
 
 import { useForceUpdate, useShallowEqualRef } from '../hooks.ts'
-import getHelpers, { copy, mapRecord } from './helpers'
+import getHelpers, { copy, mapRecord, doUnsubscribe } from './helpers'
 
 const createContextsGroup = () => <
   Configurators extends Record<any, (store: any, name: string) => any>
@@ -231,11 +231,7 @@ const createContextsGroup = () => <
         // requests manager
         const rmSubscription = dispatcher.subscribe(doUpdate)
         return () => {
-          if (typeof smSubscription === 'function') {
-            smSubscription()
-          } else if ('unsubscribe' in smSubscription) {
-            smSubscription.unsubscribe()
-          }
+          doUnsubscribe(smSubscription)
           rmSubscription.unsubscribe()
         }
       }, [checkUpdate, forceUpdate])
@@ -254,6 +250,7 @@ const createContextsGroup = () => <
     },
     useRequests,
     getState: getAllRequestsStates,
+    subscribe: (listener: () => void) => dispatcher.subscribe(listener),
     bindToStateManager
   }
 }
