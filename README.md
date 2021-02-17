@@ -872,7 +872,7 @@ const usersState = useStoreAndCombinedReqs((state, reqs) => {
 
 - [react-hooks-in-callback](https://www.npmjs.com/package/react-hooks-in-callback)
 - [react-context-selector](https://www.npmjs.com/package/react-context-selector)
-- [react-redux-selector-utils](https://www.npmjs.com/package/react-redux-selector-utils)
+- [reselect-mapper](https://www.npmjs.com/package/reselect-mapper)
 
 ## License
 
